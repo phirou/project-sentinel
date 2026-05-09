@@ -1,0 +1,17 @@
+# Backend web async
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+websockets==13.1
+
+# Modèles de données et config
+pydantic==2.9.0
+PyYAML==6.0.2
+
+# Hardware (port série pour le LD2450)
+pyserial==3.5
+
+# Outils de développement
+pytest==8.3.0
+pytest-asyncio==0.24.0
+black==24.10.0
+ruff==0.7.0

@@ -216,3 +216,36 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# === Sentinel project specific ===
+
+# Local secrets and overrides
+.env
+.env.local
+config/local.yaml
+config/secrets.yaml
+
+# Captured radar/camera data (large binary files)
+data/
+captures/
+*.bin
+!tests/fixtures/*.bin
+
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Hailo compiled models (large)
+*.hef
+
+# Logs
+*.log
+logs/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
