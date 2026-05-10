@@ -36,6 +36,7 @@ from sentinel.core.event_bus import EventBus
 from sentinel.core.models import RadarFrame
 from sentinel.drivers.ld2450_parser import LD2450ParseError, parse_frame
 from sentinel.drivers.ld2450_simulator import LD2450Simulator
+from sentinel.core.persistence import DetectionLogger
 
 logging.basicConfig(
     level=logging.INFO,
@@ -184,6 +185,11 @@ async def main() -> None:
     bus.subscribe(EVENT_RADAR_FRAME, log_frame_to_console)
     bus.subscribe(EVENT_RADAR_PARSE_ERROR, stats.on_parse_error)
 
+    # Persistance SQLite : abonnement au bus, écriture asynchrone non bloquante.
+    detection_logger = DetectionLogger(db_path="data/sentinel.db")
+    await detection_logger.start(source="simulator")
+    bus.subscribe(EVENT_RADAR_FRAME, detection_logger.on_frame)
+
     shutdown_event = asyncio.Event()
 
     def request_shutdown() -> None:
@@ -206,12 +212,16 @@ async def main() -> None:
     except asyncio.CancelledError:
         pass
 
+    # Clôture propre du logger SQLite.
+    await detection_logger.stop()
+
     final_snap = stats.snapshot()
     logger.info("=" * 60)
     logger.info("Sentinel arrêté. Stats finales :")
     for key, value in final_snap.items():
         logger.info("  %s: %s", key, value)
     logger.info("Bus : %s", bus.stats)
+    logger.info("SQLite : %s", detection_logger.stats)
 
 
 if __name__ == "__main__":
