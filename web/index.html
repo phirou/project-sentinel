@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sentinel Tactical Display</title>
+    <style>
+        body {
+            background: #0a0e0d;
+            color: #00ff41;
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 40px;
+        }
+        h1 { font-size: 32px; letter-spacing: 4px; }
+        .status { padding: 20px; border: 1px solid #00ff41; margin: 20px 0; }
+        .ok { color: #00ff41; }
+        .error { color: #ff3333; }
+        pre { background: #000; padding: 15px; border-left: 2px solid #00ff41; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🛰️ SENTINEL</h1>
+    <div class="status">
+        <div>WebSocket: <span id="ws-status" class="error">DISCONNECTED</span></div>
+        <div>Frames received: <span id="frames-count">0</span></div>
+        <div>Last targets: <span id="targets-count">—</span></div>
+    </div>
+    <h2>Latest frame:</h2>
+    <pre id="latest-frame">waiting for data...</pre>
+
+    <script>
+        const wsStatus = document.getElementById('ws-status');
+        const framesCount = document.getElementById('frames-count');
+        const targetsCount = document.getElementById('targets-count');
+        const latestFrame = document.getElementById('latest-frame');
+
+        let count = 0;
+
+        const ws = new WebSocket(`ws://${location.host}/ws/realtime`);
+
+        ws.onopen = () => {
+            wsStatus.textContent = 'CONNECTED';
+            wsStatus.className = 'ok';
+        };
+
+        ws.onclose = () => {
+            wsStatus.textContent = 'DISCONNECTED';
+            wsStatus.className = 'error';
+        };
+
+        ws.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'radar.frame') {
+                count++;
+                framesCount.textContent = count;
+                targetsCount.textContent = msg.data.target_count;
+                latestFrame.textContent = JSON.stringify(msg.data, null, 2);
+            }
+        };
+    </script>
+</body>
+</html>
