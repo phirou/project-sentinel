@@ -1,0 +1,357 @@
+/* ─────────────────────────────────────────────────────────────────────
+   SENTINEL — Lattice/HUD-style stylesheet
+   Esthétique : terminal militaire, vert phosphore sur noir,
+   inspiration Anduril Lattice / cockpit Rafale / écran radar AWACS.
+   ──────────────────────────────────────────────────────────────────── */
+
+/* === Variables de design ============================================ */
+:root {
+    /* Couleurs principales */
+    --bg-primary:    #0a0e0d;       /* fond noir verdâtre */
+    --bg-secondary:  #0f1614;       /* fond panneaux */
+    --bg-elevated:   #131c19;       /* lignes alternées */
+
+    --color-primary: #00ff41;       /* vert phosphore principal */
+    --color-dim:     #00cc33;       /* vert atténué */
+    --color-faint:   #006619;       /* vert très atténué */
+    --color-warning: #ffcc00;       /* jaune alerte */
+    --color-danger:  #ff3333;       /* rouge alerte */
+
+    --color-text:    #b8ffcc;       /* texte standard, vert clair */
+    --color-text-dim: #5a8a6c;      /* texte secondaire */
+
+    /* Typographie */
+    --font-mono: 'SF Mono', 'Monaco', 'Menlo', 'Courier New', monospace;
+    --font-size-base: 13px;
+    --font-size-small: 11px;
+    --font-size-large: 16px;
+
+    /* Espacement */
+    --gap-tight: 4px;
+    --gap-base: 8px;
+    --gap-loose: 16px;
+
+    /* Effets */
+    --glow-primary: 0 0 8px rgba(0, 255, 65, 0.5);
+    --glow-soft:    0 0 4px rgba(0, 255, 65, 0.3);
+}
+
+/* === Reset minimaliste ============================================= */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    height: 100vh;
+    overflow: hidden;
+}
+
+body {
+    background: var(--bg-primary);
+    color: var(--color-text);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-base);
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+
+    /* Effet scanlines : texture CRT subtile sur tout le dashboard */
+    background-image:
+        linear-gradient(
+            rgba(0, 255, 65, 0.025) 50%,
+            transparent 50%
+        );
+    background-size: 100% 3px;
+
+    display: flex;
+    flex-direction: column;
+}
+
+/* === Header HUD ===================================================== */
+.hud-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--gap-base) var(--gap-loose);
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--color-faint);
+    flex-shrink: 0;
+}
+
+.hud-title {
+    display: flex;
+    align-items: baseline;
+    gap: var(--gap-base);
+    color: var(--color-primary);
+    text-shadow: var(--glow-primary);
+}
+
+.hud-icon {
+    font-size: 22px;
+}
+
+.hud-text {
+    font-size: 22px;
+    font-weight: bold;
+    letter-spacing: 0.4em;
+}
+
+.hud-subtitle {
+    color: var(--color-dim);
+    font-size: var(--font-size-small);
+    letter-spacing: 0.2em;
+}
+
+.hud-status {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-base);
+    font-size: var(--font-size-small);
+    color: var(--color-text-dim);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-danger);
+    box-shadow: 0 0 6px var(--color-danger);
+}
+
+.status-dot.live {
+    background: var(--color-primary);
+    box-shadow: 0 0 6px var(--color-primary);
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.status-separator {
+    color: var(--color-faint);
+}
+
+#status-text {
+    color: var(--color-primary);
+    font-weight: bold;
+    letter-spacing: 0.1em;
+}
+
+#status-text.disconnected {
+    color: var(--color-danger);
+}
+
+/* === Zone principale =============================================== */
+.hud-main {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: var(--gap-loose);
+    padding: var(--gap-loose);
+    flex: 1;
+    min-height: 0; /* permet au canvas de respecter son conteneur */
+}
+
+/* === Canvas radar ================================================== */
+.radar-display {
+    background: var(--bg-secondary);
+    border: 1px solid var(--color-faint);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.radar-display::before {
+    /* Coins décoratifs HUD */
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+        linear-gradient(to right, var(--color-primary) 0, var(--color-primary) 20px, transparent 20px) top left,
+        linear-gradient(to bottom, var(--color-primary) 0, var(--color-primary) 20px, transparent 20px) top left,
+        linear-gradient(to left, var(--color-primary) 0, var(--color-primary) 20px, transparent 20px) top right,
+        linear-gradient(to bottom, var(--color-primary) 0, var(--color-primary) 20px, transparent 20px) top right,
+        linear-gradient(to right, var(--color-primary) 0, var(--color-primary) 20px, transparent 20px) bottom left,
+        linear-gradient(to top, var(--color-primary) 0, var(--color-primary) 20px, transparent 20px) bottom left,
+        linear-gradient(to left, var(--color-primary) 0, var(--color-primary) 20px, transparent 20px) bottom right,
+        linear-gradient(to top, var(--color-primary) 0, var(--color-primary) 20px, transparent 20px) bottom right;
+    background-repeat: no-repeat;
+    background-size: 20px 1px, 1px 20px, 20px 1px, 1px 20px,
+                     20px 1px, 1px 20px, 20px 1px, 1px 20px;
+    pointer-events: none;
+}
+
+#radar-canvas {
+    width: 100%;
+    height: 100%;
+}
+
+/* === Panneau latéral ============================================== */
+.info-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-loose);
+    overflow-y: auto;
+}
+
+.info-block {
+    background: var(--bg-secondary);
+    border: 1px solid var(--color-faint);
+    padding: var(--gap-loose);
+}
+
+.info-block-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--color-primary);
+    font-size: var(--font-size-small);
+    letter-spacing: 0.15em;
+    border-bottom: 1px solid var(--color-faint);
+    padding-bottom: var(--gap-base);
+    margin-bottom: var(--gap-base);
+}
+
+.info-count {
+    background: var(--color-primary);
+    color: var(--bg-primary);
+    padding: 1px 8px;
+    font-weight: bold;
+    border-radius: 2px;
+}
+
+/* === Liste des cibles ============================================= */
+.targets-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-base);
+}
+
+.target-empty {
+    color: var(--color-text-dim);
+    font-style: italic;
+    text-align: center;
+    padding: var(--gap-loose);
+    font-size: var(--font-size-small);
+}
+
+.target-card {
+    background: var(--bg-elevated);
+    border-left: 2px solid var(--color-primary);
+    padding: var(--gap-base) var(--gap-loose);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: var(--gap-base);
+    align-items: center;
+}
+
+.target-card.approaching {
+    border-left-color: var(--color-warning);
+}
+
+.target-id {
+    color: var(--color-primary);
+    font-weight: bold;
+    font-size: var(--font-size-base);
+}
+
+.target-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: var(--font-size-small);
+}
+
+.target-info-row {
+    display: flex;
+    gap: var(--gap-base);
+    color: var(--color-text);
+}
+
+.target-info-row .label {
+    color: var(--color-text-dim);
+    min-width: 38px;
+}
+
+.target-state {
+    font-size: var(--font-size-small);
+    padding: 2px 6px;
+    border: 1px solid var(--color-primary);
+    color: var(--color-primary);
+    text-align: center;
+    letter-spacing: 0.1em;
+}
+
+.target-state.approaching {
+    border-color: var(--color-warning);
+    color: var(--color-warning);
+}
+
+.target-state.stationary {
+    border-color: var(--color-text-dim);
+    color: var(--color-text-dim);
+}
+
+/* === Télémétrie =================================================== */
+.telemetry-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.telemetry-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--font-size-small);
+    padding: 2px 0;
+}
+
+.telemetry-label {
+    color: var(--color-text-dim);
+    letter-spacing: 0.1em;
+}
+
+.telemetry-value {
+    color: var(--color-text);
+    font-weight: bold;
+}
+
+/* === Footer ======================================================= */
+.hud-footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--gap-base);
+    padding: 6px var(--gap-loose);
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--color-faint);
+    font-size: var(--font-size-small);
+    color: var(--color-text-dim);
+    letter-spacing: 0.15em;
+    flex-shrink: 0;
+}
+
+.footer-separator {
+    color: var(--color-faint);
+}
+
+/* === Scrollbar custom ============================================= */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-faint);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-dim);
+}

@@ -2,61 +2,122 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Sentinel Tactical Display</title>
-    <style>
-        body {
-            background: #0a0e0d;
-            color: #00ff41;
-            font-family: 'Courier New', monospace;
-            margin: 0;
-            padding: 40px;
-        }
-        h1 { font-size: 32px; letter-spacing: 4px; }
-        .status { padding: 20px; border: 1px solid #00ff41; margin: 20px 0; }
-        .ok { color: #00ff41; }
-        .error { color: #ff3333; }
-        pre { background: #000; padding: 15px; border-left: 2px solid #00ff41; overflow-x: auto; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentinel // Tactical Display</title>
+    <link rel="stylesheet" href="/static/css/lattice.css">
 </head>
 <body>
-    <h1>🛰️ SENTINEL</h1>
-    <div class="status">
-        <div>WebSocket: <span id="ws-status" class="error">DISCONNECTED</span></div>
-        <div>Frames received: <span id="frames-count">0</span></div>
-        <div>Last targets: <span id="targets-count">—</span></div>
-    </div>
-    <h2>Latest frame:</h2>
-    <pre id="latest-frame">waiting for data...</pre>
 
-    <script>
-        const wsStatus = document.getElementById('ws-status');
-        const framesCount = document.getElementById('frames-count');
-        const targetsCount = document.getElementById('targets-count');
-        const latestFrame = document.getElementById('latest-frame');
+    <!-- Bandeau supérieur : titre + status système -->
+    <header class="hud-header">
+        <div class="hud-title">
+            <span class="hud-icon">▣</span>
+            <span class="hud-text">SENTINEL</span>
+            <span class="hud-subtitle">// TACTICAL DISPLAY</span>
+        </div>
+        <div class="hud-status">
+            <span id="status-indicator" class="status-dot"></span>
+            <span id="status-text">CONNECTING</span>
+            <span class="status-separator">│</span>
+            <span id="status-rate">— Hz</span>
+            <span class="status-separator">│</span>
+            <span id="status-clock">00:00:00</span>
+        </div>
+    </header>
 
-        let count = 0;
+    <!-- Zone principale : radar à gauche, panneaux d'info à droite -->
+    <main class="hud-main">
 
-        const ws = new WebSocket(`ws://${location.host}/ws/realtime`);
+        <!-- Affichage radar -->
+        <section class="radar-display">
+            <canvas id="radar-canvas"></canvas>
+        </section>
 
-        ws.onopen = () => {
-            wsStatus.textContent = 'CONNECTED';
-            wsStatus.className = 'ok';
-        };
+        <!-- Panneau d'information -->
+        <aside class="info-panel">
 
-        ws.onclose = () => {
-            wsStatus.textContent = 'DISCONNECTED';
-            wsStatus.className = 'error';
-        };
+            <!-- Liste des cibles détectées -->
+            <div class="info-block">
+                <div class="info-block-title">
+                    <span>⏵ TARGETS DETECTED</span>
+                    <span id="target-count" class="info-count">0</span>
+                </div>
+                <div id="targets-list" class="targets-list">
+                    <div class="target-empty">— No targets in field of view —</div>
+                </div>
+            </div>
 
-        ws.onmessage = (event) => {
-            const msg = JSON.parse(event.data);
-            if (msg.type === 'radar.frame') {
-                count++;
-                framesCount.textContent = count;
-                targetsCount.textContent = msg.data.target_count;
-                latestFrame.textContent = JSON.stringify(msg.data, null, 2);
-            }
-        };
-    </script>
+            <!-- Télémétrie système -->
+            <div class="info-block">
+                <div class="info-block-title">
+                    <span>⏵ TELEMETRY</span>
+                </div>
+                <div class="telemetry-grid">
+                    <div class="telemetry-row">
+                        <span class="telemetry-label">FRAMES</span>
+                        <span id="tlm-frames" class="telemetry-value">0</span>
+                    </div>
+                    <div class="telemetry-row">
+                        <span class="telemetry-label">WITH TARGETS</span>
+                        <span id="tlm-with-targets" class="telemetry-value">0</span>
+                    </div>
+                    <div class="telemetry-row">
+                        <span class="telemetry-label">PARSE ERRORS</span>
+                        <span id="tlm-errors" class="telemetry-value">0</span>
+                    </div>
+                    <div class="telemetry-row">
+                        <span class="telemetry-label">AVG / FRAME</span>
+                        <span id="tlm-avg" class="telemetry-value">0.00</span>
+                    </div>
+                    <div class="telemetry-row">
+                        <span class="telemetry-label">UPTIME</span>
+                        <span id="tlm-uptime" class="telemetry-value">00:00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration / metadata -->
+            <div class="info-block">
+                <div class="info-block-title">
+                    <span>⏵ SENSOR</span>
+                </div>
+                <div class="telemetry-grid">
+                    <div class="telemetry-row">
+                        <span class="telemetry-label">MODEL</span>
+                        <span class="telemetry-value">HLK-LD2450</span>
+                    </div>
+                    <div class="telemetry-row">
+                        <span class="telemetry-label">FREQUENCY</span>
+                        <span class="telemetry-value">24 GHz</span>
+                    </div>
+                    <div class="telemetry-row">
+                        <span class="telemetry-label">FOV</span>
+                        <span class="telemetry-value">±60°</span>
+                    </div>
+                    <div class="telemetry-row">
+                        <span class="telemetry-label">RANGE</span>
+                        <span class="telemetry-value">8 m</span>
+                    </div>
+                    <div class="telemetry-row">
+                        <span class="telemetry-label">SOURCE</span>
+                        <span id="tlm-source" class="telemetry-value">SIMULATOR</span>
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+
+    </main>
+
+    <!-- Pied de page minimal -->
+    <footer class="hud-footer">
+        <span>SENTINEL v0.1.0</span>
+        <span class="footer-separator">│</span>
+        <span>DETECTION-ONLY SURVEILLANCE SYSTEM</span>
+        <span class="footer-separator">│</span>
+        <span id="footer-clients">0 client(s)</span>
+    </footer>
+
+    <script src="/static/js/dashboard.js"></script>
 </body>
 </html>
