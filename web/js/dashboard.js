@@ -204,7 +204,7 @@ function updateTargetsList() {
                         <span>${arrow} ${Math.abs(t.speed_ms).toFixed(2)} m/s</span>
                     </div>
                 </div>
-                <div class="target-state ${stateClass}">${t.state.toUpperCase().slice(0, 3)}</div>
+                <div class="target-state ${stateClass}">${arrow}</div>
             </div>
         `;
     }).join('');
