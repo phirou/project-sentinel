@@ -18,11 +18,13 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from sentinel.core import queries
 from sentinel.core.event_bus import EventBus
 from sentinel.core.models import RadarFrame
 
@@ -106,7 +108,7 @@ class WebSocketBroadcaster:
 # FACTORY DE L'APPLICATION
 # ─────────────────────────────────────────────────────────────────────────────
 
-def create_app(bus: EventBus) -> FastAPI:
+def create_app(bus: EventBus, db_path: str = "data/sentinel.db") -> FastAPI:
     """
     Construit et retourne une instance configurée de l'application FastAPI.
 
@@ -129,20 +131,49 @@ def create_app(bus: EventBus) -> FastAPI:
     # Mémorisation de l'heure de démarrage pour calculer l'uptime.
     started_at = datetime.now(timezone.utc)
 
-    # ─── Endpoint REST de status ─────────────────────────────────────
+    # ─── Endpoints REST : historique des sessions et détections ──────
 
-    @app.get("/api/status")
-    async def get_status() -> dict:
-        """Retourne l'état de santé général du système."""
-        now = datetime.now(timezone.utc)
-        uptime_seconds = (now - started_at).total_seconds()
-        return {
-            "status": "running",
-            "started_at": started_at.isoformat(),
-            "uptime_seconds": uptime_seconds,
-            "websocket_clients": broadcaster.client_count,
-            "event_bus": bus.stats,
-        }
+    @app.get("/api/sessions")
+    async def list_sessions_endpoint(limit: int = Query(50, ge=1, le=500)):
+        """Liste les sessions enregistrées, les plus récentes en premier."""
+        return await queries.list_sessions(db_path=db_path, limit=limit)
+
+    @app.get("/api/sessions/{session_id}")
+    async def get_session_endpoint(session_id: int):
+        """Détails d'une session spécifique."""
+        session = await queries.get_session(session_id, db_path=db_path)
+        if session is None:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return session
+
+    @app.get("/api/detections")
+    async def list_detections_endpoint(
+        limit: int = Query(100, ge=1, le=10000),
+        since: Optional[datetime] = Query(None, description="ISO datetime"),
+        session_id: Optional[int] = Query(None),
+    ):
+        """
+        Liste les détections, filtrables par date et/ou session.
+
+        Exemples :
+            /api/detections?limit=50
+            /api/detections?since=2026-05-10T14:00:00Z
+            /api/detections?session_id=3&limit=200
+        """
+        return await queries.list_detections(
+            db_path=db_path,
+            limit=limit,
+            since=since,
+            session_id=session_id,
+        )
+
+    @app.get("/api/detections/stats")
+    async def detection_stats_endpoint(session_id: Optional[int] = Query(None)):
+        """Statistiques agrégées sur les détections (globales ou par session)."""
+        return await queries.get_detection_stats(
+            db_path=db_path,
+            session_id=session_id,
+        )
 
     # ─── Endpoint WebSocket temps réel ───────────────────────────────
 

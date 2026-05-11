@@ -179,7 +179,7 @@ async def web_server(
     config: SentinelConfig,
 ) -> None:
     """Lance le serveur FastAPI/uvicorn avec la config fournie."""
-    app = create_app(bus)
+    app = create_app(bus, db_path=config.persistence.db_path)
     uvicorn_config = uvicorn.Config(
         app,
         host=config.web.host,
