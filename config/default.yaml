@@ -1,0 +1,39 @@
+# ═══════════════════════════════════════════════════════════════════════
+# Sentinel — Configuration par défaut
+# ═══════════════════════════════════════════════════════════════════════
+# Ce fichier est commité dans Git et représente la config de référence.
+# Pour des overrides locaux non commités, créer config/local.yaml.
+# Pour le déploiement sur Pi, créer config/production.yaml et lancer
+# avec : python -m sentinel.main --config config/production.yaml
+# ═══════════════════════════════════════════════════════════════════════
+
+# ─── Source radar ──────────────────────────────────────────────────────
+radar:
+  # 'simulator' : utilise le générateur Python (pas de hardware requis).
+  # 'uart'      : lit le vrai LD2450 sur un port série.
+  source: simulator
+
+  # Paramètres UART (ignorés si source = simulator)
+  # Sur Raspberry Pi 5 :  /dev/ttyAMA0 (UART matériel sur GPIO 14/15)
+  # Sur USB-UART adapter : /dev/ttyUSB0 ou /dev/cu.usbserial-* (Mac)
+  uart_port: /dev/ttyAMA0
+  uart_baudrate: 256000
+
+  # Paramètres simulateur (ignorés si source = uart)
+  simulator_targets: 2
+
+# ─── Serveur web ───────────────────────────────────────────────────────
+web:
+  host: "0.0.0.0"       # 0.0.0.0 = accessible depuis le réseau local
+  port: 8000
+  enable_dashboard: true
+
+# ─── Persistance SQLite ────────────────────────────────────────────────
+persistence:
+  enabled: true
+  db_path: data/sentinel.db
+
+# ─── Logging ───────────────────────────────────────────────────────────
+logging:
+  level: INFO            # DEBUG / INFO / WARNING / ERROR
+  stats_interval_seconds: 5.0

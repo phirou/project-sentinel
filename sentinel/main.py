@@ -24,25 +24,23 @@ Auteur : Léo
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import logging
 import signal
+from pathlib import Path
 from typing import Any
 
 import uvicorn
 
 from sentinel.api.app import create_app
+from sentinel.config import RadarSourceType, SentinelConfig, load_config
 from sentinel.core.event_bus import EventBus
 from sentinel.core.models import RadarFrame
+from sentinel.core.persistence import DetectionLogger
 from sentinel.drivers.ld2450_parser import LD2450ParseError, parse_frame
 from sentinel.drivers.ld2450_simulator import LD2450Simulator
-from sentinel.core.persistence import DetectionLogger
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)-7s] %(name)s: %(message)s",
-    datefmt="%H:%M:%S",
-)
 logger = logging.getLogger("sentinel.main")
 
 EVENT_RADAR_FRAME = "radar.frame"
@@ -96,7 +94,41 @@ async def log_frame_to_console(frame: RadarFrame) -> None:
     )
     logger.info("📡 %d cible(s) — %s", frame.target_count, targets_str)
 
+# ─────────────────────────────────────────────────────────────────────────────
+# CONSTRUCTION DE LA SOURCE RADAR (selon la config)
+# ─────────────────────────────────────────────────────────────────────────────
 
+def build_radar_source(config: SentinelConfig):
+    """
+    Construit la source radar en fonction de la configuration.
+
+    Retourne un objet exposant une méthode async stream() qui yield des
+    trames binaires (bytes). Pour l'instant, seul le simulateur est
+    supporté. Le vrai LD2450Driver sera ajouté à l'étape suivante.
+
+    Cette fonction est le point d'inversion de dépendance entre le pipeline
+    et le hardware : tout le reste du code consomme l'interface "qui émet
+    des trames binaires" sans savoir si c'est simulé ou réel.
+    """
+    if config.radar.source == RadarSourceType.SIMULATOR:
+        logger.info(
+            "Source radar : SIMULATEUR (%d cibles aléatoires)",
+            config.radar.simulator_targets,
+        )
+        sim = LD2450Simulator()
+        sim.populate_random(n=config.radar.simulator_targets)
+        return sim
+
+    elif config.radar.source == RadarSourceType.UART:
+        # Le driver UART sera implémenté dans l'étape suivante.
+        # Pour l'instant on lève une exception claire.
+        raise NotImplementedError(
+            "Le driver UART du LD2450 n'est pas encore implémenté. "
+            "Utiliser source = 'simulator' en attendant."
+        )
+
+    else:
+        raise ValueError(f"Source radar inconnue : {config.radar.source}")
 # ─────────────────────────────────────────────────────────────────────────────
 # COROUTINES DU PIPELINE
 # ─────────────────────────────────────────────────────────────────────────────
@@ -121,11 +153,14 @@ async def radar_pipeline(
         await bus.publish(EVENT_RADAR_FRAME, frame)
 
 
-async def stats_reporter(stats: FrameStats, shutdown_event: asyncio.Event) -> None:
-    """Log périodique des stats toutes les 5 secondes."""
+async def stats_reporter(
+    stats: FrameStats,
+    shutdown_event: asyncio.Event,
+    interval_seconds: float = 5.0,) -> None:
+    """Log périodique des stats."""
     while not shutdown_event.is_set():
         try:
-            await asyncio.wait_for(shutdown_event.wait(), timeout=5.0)
+            await asyncio.wait_for(shutdown_event.wait(), timeout=interval_seconds)
             break
         except asyncio.TimeoutError:
             snap = stats.snapshot()
@@ -138,31 +173,29 @@ async def stats_reporter(stats: FrameStats, shutdown_event: asyncio.Event) -> No
             )
 
 
-async def web_server(bus: EventBus, shutdown_event: asyncio.Event) -> None:
-    """
-    Coroutine qui lance le serveur web FastAPI/uvicorn.
-
-    On utilise uvicorn.Server programmatically (et non en CLI) pour qu'il
-    tourne sur la même boucle asyncio que le reste du pipeline. Ça évite
-    les threads et garantit que les handlers WebSocket voient les mêmes
-    événements que les autres subscribers du bus.
-    """
+async def web_server(
+    bus: EventBus,
+    shutdown_event: asyncio.Event,
+    config: SentinelConfig,
+) -> None:
+    """Lance le serveur FastAPI/uvicorn avec la config fournie."""
     app = create_app(bus)
-    config = uvicorn.Config(
+    uvicorn_config = uvicorn.Config(
         app,
-        host="0.0.0.0",   # accessible depuis le réseau local (pour démo)
-        port=8000,
-        log_level="warning",  # uvicorn log seulement les warnings/errors
-        access_log=False,     # pas de log d'accès HTTP, trop verbeux
+        host=config.web.host,
+        port=config.web.port,
+        log_level="warning",
+        access_log=False,
     )
-    server = uvicorn.Server(config)
+    server = uvicorn.Server(uvicorn_config)
 
-    logger.info("🌐 Serveur web démarré sur http://localhost:8000")
+    logger.info(
+        "🌐 Serveur web démarré sur http://%s:%d",
+        "localhost" if config.web.host == "0.0.0.0" else config.web.host,
+        config.web.port,
+    )
 
-    # On lance le serveur dans une tâche pour pouvoir l'arrêter proprement.
     server_task = asyncio.create_task(server.serve())
-
-    # On attend soit le shutdown global, soit la fin du serveur (improbable).
     await shutdown_event.wait()
 
     logger.info("Arrêt du serveur web demandé")
@@ -174,22 +207,35 @@ async def web_server(bus: EventBus, shutdown_event: asyncio.Event) -> None:
 # AMORÇAGE
 # ─────────────────────────────────────────────────────────────────────────────
 
-async def main() -> None:
-    """Construit les composants et lance les coroutines en parallèle."""
-    bus = EventBus()
-    simulator = LD2450Simulator()
-    simulator.populate_random(n=2)
+async def main(config: SentinelConfig) -> None:
+    """
+    Construit les composants depuis la config et lance les coroutines.
 
+    Toutes les valeurs (port, source radar, chemin DB, etc.) proviennent
+    de la config — aucun hardcode ici. Cela permet de faire varier le
+    comportement de Sentinel sans toucher au code Python.
+    """
+    bus = EventBus()
+
+    # Construction de la source radar selon la config.
+    radar_source = build_radar_source(config)
+
+    # Subscribers
     stats = FrameStats()
     bus.subscribe(EVENT_RADAR_FRAME, stats.on_frame)
     bus.subscribe(EVENT_RADAR_FRAME, log_frame_to_console)
     bus.subscribe(EVENT_RADAR_PARSE_ERROR, stats.on_parse_error)
 
-    # Persistance SQLite : abonnement au bus, écriture asynchrone non bloquante.
-    detection_logger = DetectionLogger(db_path="data/sentinel.db")
-    await detection_logger.start(source="simulator")
-    bus.subscribe(EVENT_RADAR_FRAME, detection_logger.on_frame)
+    # Persistance SQLite (optionnelle selon la config).
+    detection_logger: DetectionLogger | None = None
+    if config.persistence.enabled:
+        detection_logger = DetectionLogger(db_path=config.persistence.db_path)
+        await detection_logger.start(source=config.radar.source.value)
+        bus.subscribe(EVENT_RADAR_FRAME, detection_logger.on_frame)
+    else:
+        logger.info("Persistance SQLite désactivée par configuration")
 
+    # Mécanisme d'arrêt propre.
     shutdown_event = asyncio.Event()
 
     def request_shutdown() -> None:
@@ -201,19 +247,24 @@ async def main() -> None:
         loop.add_signal_handler(sig, request_shutdown)
 
     logger.info("🚀 Sentinel démarré — Ctrl+C pour arrêter")
-    logger.info("📺 Dashboard : http://localhost:8000")
+    logger.info(
+        "📺 Dashboard : http://%s:%d",
+        "localhost" if config.web.host == "0.0.0.0" else config.web.host,
+        config.web.port,
+    )
 
     try:
         await asyncio.gather(
-            radar_pipeline(simulator, bus, shutdown_event),
-            stats_reporter(stats, shutdown_event),
-            web_server(bus, shutdown_event),
+            radar_pipeline(radar_source, bus, shutdown_event),
+            stats_reporter(stats, shutdown_event, config.logging.stats_interval_seconds),
+            web_server(bus, shutdown_event, config),
         )
     except asyncio.CancelledError:
         pass
 
-    # Clôture propre du logger SQLite.
-    await detection_logger.stop()
+    # Clôture propre du logger SQLite (si actif).
+    if detection_logger is not None:
+        await detection_logger.stop()
 
     final_snap = stats.snapshot()
     logger.info("=" * 60)
@@ -221,8 +272,54 @@ async def main() -> None:
     for key, value in final_snap.items():
         logger.info("  %s: %s", key, value)
     logger.info("Bus : %s", bus.stats)
-    logger.info("SQLite : %s", detection_logger.stats)
+    if detection_logger is not None:
+        logger.info("SQLite : %s", detection_logger.stats)
+        
+# ─────────────────────────────────────────────────────────────────────────────
+# POINT D'ENTRÉE CLI
+# ─────────────────────────────────────────────────────────────────────────────
+
+def cli() -> None:
+    """
+    Point d'entrée CLI : parse les arguments, charge la config, lance main().
+
+    Usage :
+        python -m sentinel.main                       (config par défaut)
+        python -m sentinel.main --config FILE.yaml    (config explicite)
+        python -m sentinel.main --log-level DEBUG     (override du niveau de log)
+    """
+    parser = argparse.ArgumentParser(
+        description="Sentinel — Système de surveillance radar autonome",
+    )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help="Chemin vers un fichier YAML de config autonome",
+    )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default=None,
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Override du niveau de log (défaut: lu depuis la config)",
+    )
+    args = parser.parse_args()
+
+    # Chargement de la config
+    config = load_config(config_file=args.config)
+
+    # Override CLI du niveau de log s'il est fourni
+    log_level = args.log_level or config.logging.level
+
+    logging.basicConfig(
+        level=getattr(logging, log_level),
+        format="%(asctime)s [%(levelname)-7s] %(name)s: %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
+    asyncio.run(main(config))
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    cli()
