@@ -120,11 +120,16 @@ def build_radar_source(config: SentinelConfig):
         return sim
 
     elif config.radar.source == RadarSourceType.UART:
-        # Le driver UART sera implémenté dans l'étape suivante.
-        # Pour l'instant on lève une exception claire.
-        raise NotImplementedError(
-            "Le driver UART du LD2450 n'est pas encore implémenté. "
-            "Utiliser source = 'simulator' en attendant."
+        logger.info(
+            "Source radar : UART (port=%s, baudrate=%d)",
+            config.radar.uart_port,
+            config.radar.uart_baudrate,
+        )
+        # Import lazy : pyserial-asyncio n'est requis qu'en mode UART.
+        from sentinel.drivers.ld2450_driver import LD2450Driver
+        return LD2450Driver(
+            port=config.radar.uart_port,
+            baudrate=config.radar.uart_baudrate,
         )
 
     else:
@@ -178,7 +183,14 @@ async def web_server(
     shutdown_event: asyncio.Event,
     config: SentinelConfig,
 ) -> None:
-    """Lance le serveur FastAPI/uvicorn avec la config fournie."""
+    """
+    Lance le serveur FastAPI/uvicorn avec la config fournie.
+
+    Note: on désactive la gestion native des signaux d'uvicorn
+    (install_signal_handlers=False) parce qu'elle entre en conflit
+    avec notre propre gestion dans cli(). Sentinel gère SIGINT/SIGTERM
+    au niveau asyncio top-level, uvicorn n'a pas à s'en mêler.
+    """
     app = create_app(bus, db_path=config.persistence.db_path)
     uvicorn_config = uvicorn.Config(
         app,
@@ -189,18 +201,39 @@ async def web_server(
     )
     server = uvicorn.Server(uvicorn_config)
 
+    # Important: empêche uvicorn d'installer ses propres signal handlers.
+    # Sans ça, uvicorn intercepte SIGINT/SIGTERM et notre shutdown_event
+    # n'est jamais déclenché.
+    server.install_signal_handlers = lambda: None
+
     logger.info(
-        "🌐 Serveur web démarré sur http://%s:%d",
+        " --- Serveur web démarré sur http://%s:%d",
         "localhost" if config.web.host == "0.0.0.0" else config.web.host,
         config.web.port,
     )
 
     server_task = asyncio.create_task(server.serve())
-    await shutdown_event.wait()
+
+    # Attendre le shutdown signal venu d'ailleurs.
+    try:
+        await shutdown_event.wait()
+    except asyncio.CancelledError:
+        pass
 
     logger.info("Arrêt du serveur web demandé")
     server.should_exit = True
-    await server_task
+
+    # Donner 2 secondes max à uvicorn pour fermer proprement,
+    # puis on force.
+    try:
+        await asyncio.wait_for(server_task, timeout=2.0)
+    except asyncio.TimeoutError:
+        logger.warning("Uvicorn n'a pas fermé en 2s, annulation forcée")
+        server_task.cancel()
+        try:
+            await server_task
+        except asyncio.CancelledError:
+            pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -253,14 +286,39 @@ async def main(config: SentinelConfig) -> None:
         config.web.port,
     )
 
+    # Création des tâches individuelles pour pouvoir les annuler proprement
+    # en cas de shutdown lent.
+    pipeline_task = asyncio.create_task(
+        radar_pipeline(radar_source, bus, shutdown_event)
+    )
+    stats_task = asyncio.create_task(
+        stats_reporter(stats, shutdown_event, config.logging.stats_interval_seconds)
+    )
+    web_task = asyncio.create_task(
+        web_server(bus, shutdown_event, config)
+    )
+
+    all_tasks = [pipeline_task, stats_task, web_task]
+
+    # On attend soit que toutes les tâches terminent naturellement (improbable),
+    # soit que le shutdown_event soit déclenché.
     try:
-        await asyncio.gather(
-            radar_pipeline(radar_source, bus, shutdown_event),
-            stats_reporter(stats, shutdown_event, config.logging.stats_interval_seconds),
-            web_server(bus, shutdown_event, config),
-        )
+        await shutdown_event.wait()
     except asyncio.CancelledError:
-        pass
+        # SIGINT/SIGTERM reçu avant même que shutdown_event soit déclenché
+        # (cas rare mais possible). On déclenche manuellement.
+        shutdown_event.set()
+
+    logger.info("Arrêt des tâches en cours...")
+
+    # On laisse 3 secondes aux tâches pour s'arrêter proprement, puis on
+    # les annule de force.
+    for task in all_tasks:
+        if not task.done():
+            task.cancel()
+
+    # Attente finale, avec absorption des CancelledError.
+    await asyncio.gather(*all_tasks, return_exceptions=True)
 
     # Clôture propre du logger SQLite (si actif).
     if detection_logger is not None:
