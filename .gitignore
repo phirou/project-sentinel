@@ -249,3 +249,24 @@ logs/
 .vscode/
 *.swp
 *~
+
+
+# ─── Machine Learning ─────────────────────────────────────────────
+# Datasets : trop volumineux pour Git, à télécharger localement
+data/humans/raw/
+data/humans/processed/
+data/coco/
+data/openimages/
+
+# Checkpoints de modèles : volumineux (>50 Mo chacun)
+models/checkpoints/
+*.pth
+*.pt
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Cache PyTorch
+__pycache__/
+*.pyc

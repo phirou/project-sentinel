@@ -21,3 +21,16 @@ aiosqlite==0.20.0
 
 # UART asynchrone pour le driver LD2450
 pyserial-asyncio==0.6
+
+
+
+# ─── Machine Learning ─────────────────────────────────────────────
+# PyTorch : deep learning framework (backend MPS sur Mac M-series)
+torch==2.5.1
+torchvision==0.20.1
+
+# Utilitaires d'entraînement et de visualisation
+matplotlib==3.10.0
+pillow==11.0.0
+tqdm==4.67.1
+ipykernel==6.29.5
