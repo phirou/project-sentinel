@@ -116,7 +116,7 @@ class Target(BaseModel):
         from math import atan2, degrees
         # atan2(x, y) donne l'angle par rapport à l'axe Y (et non X), ce qui
         # correspond à notre convention "0° = devant".
-        return degrees(atan2(self.x_mm, self.y_mm))
+        return degrees(atan2(self.x_mm, -self.y_mm))
 
     @computed_field  # type: ignore[prop-decorator]
     @property
