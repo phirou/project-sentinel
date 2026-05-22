@@ -40,6 +40,7 @@ from sentinel.core.models import RadarFrame
 from sentinel.core.persistence import DetectionLogger
 from sentinel.drivers.ld2450_parser import LD2450ParseError, parse_frame
 from sentinel.drivers.ld2450_simulator import LD2450Simulator
+from sentinel.consumers.camera_trigger import CameraTrigger
 
 logger = logging.getLogger("sentinel.main")
 
@@ -268,7 +269,17 @@ async def main(config: SentinelConfig) -> None:
     else:
         logger.info("Persistance SQLite désactivée par configuration")
 
-    # Mécanisme d'arrêt propre.
+# Camera : capture déclenchée par détection radar (slew-to-cue).
+    camera_trigger: CameraTrigger | None = None
+    if config.radar.source == RadarSourceType.UART:
+        try:
+            camera_trigger = CameraTrigger(cooldown_seconds=5.0)
+            camera_trigger.start()
+            bus.subscribe(EVENT_RADAR_FRAME, camera_trigger.on_frame)
+        except Exception as exc:
+            logger.warning("Caméra indisponible, capture désactivée : %s", exc)
+            camera_trigger = None
+    # Mecanisme d'arrêt propre.
     shutdown_event = asyncio.Event()
 
     def request_shutdown() -> None:
@@ -323,6 +334,10 @@ async def main(config: SentinelConfig) -> None:
     # Clôture propre du logger SQLite (si actif).
     if detection_logger is not None:
         await detection_logger.stop()
+
+# Fermeture de la caméra (si active).
+    if camera_trigger is not None:
+        camera_trigger.stop()
 
     final_snap = stats.snapshot()
     logger.info("=" * 60)
