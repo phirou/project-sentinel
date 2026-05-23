@@ -270,3 +270,8 @@ models/checkpoints/
 # Cache PyTorch
 __pycache__/
 *.pyc
+# Datasets ML (images locales, non versionnées)
+ml/data/
+
+# Poids de modèles entraînés (lourds, non versionnés)
+ml/*.pth
