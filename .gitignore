@@ -275,3 +275,7 @@ ml/data/
 
 # Poids de modèles entraînés (lourds, non versionnés)
 ml/*.pth
+
+# Vidéos de test (lourdes, non versionnées)
+tools/detection_viewer/videos_test/
+*.mp4
