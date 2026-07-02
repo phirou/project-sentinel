@@ -54,7 +54,7 @@ DOSSIER_APP = Path(__file__).resolve().parent
 # Source vidéo par défaut au démarrage (nom de fichier, cherché d'abord dans
 # videos_test/ puis à la racine du repo). L'interface permet ensuite de
 # basculer à chaud sur une autre vidéo ou sur la caméra (voir /set_source).
-VIDEO_SOURCE = "test_video.mp4"
+VIDEO_SOURCE = "crowd_street_dense.mp4"
 
 # Vidéos de test proposées dans l'interface. Le dossier est re-scanné à chaque
 # appel de /sources : y déposer un fichier suffit, sans redémarrer le serveur.
