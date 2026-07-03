@@ -1,183 +1,182 @@
-# Sentinel — Journal de projet
+# Sentinel — Project Journal
 
-> Mémoire vivante du projet. À relire (ou recoller à un assistant) en début de
-> session pour reprendre le contexte sans rien oublier. Mettre à jour à chaque
-> avancée importante.
+> Living memory of the project. Re-read (or paste to an assistant) at the start
+> of a session to restore full context. Update after each significant step.
 
-Dernière mise à jour : 2026-05-22
-
----
-
-## 0. Pitch & objectif
-
-Système de surveillance autonome inspiré des Sentry Towers d'Anduril.
-**Détection uniquement, aucun armement.** Workflow : radar mmWave détecte du
-mouvement 360° → caméra pointe vers la cible → IA embarquée classifie
-(humain / animal / véhicule). Dashboard tactique temps réel.
-
-Objectif personnel : projet portfolio pour viser l'ingénierie défense/aéro
-(Anduril, Thales, MBDA, Dassault, SpaceX).
+Last updated: 2026-07-03
 
 ---
 
-## 1. État du projet (phases)
+## 0. Pitch & goal
 
-- **Phase 1 — Détecteur radar fixe + dashboard temps réel** : ✅ FONCTIONNEL
-  Radar physique validé, déployé sur Pi embarqué autonome.
-- **Phase 2 — Caméra + IA + auto-pointage** : ⏳ EN COURS
-  Caméra branchée + capture déclenchée par radar (slew-to-cue) ✅.
-  IA de classification : en cours de développement.
-- **Phase 3 — Longue portée + fusion + tracking multi-cibles** : 🔜 planifié.
+Autonomous surveillance mini-tower inspired by Anduril's Sentry Towers.
+**Detection only, no weapons.** Workflow: an mmWave radar detects motion and
+gives azimuth/range (slew-to-cue) → the camera observes that zone → an AI model
+analyses the live video stream and classifies what it sees (human / vehicle /
+animal). Real-time tactical dashboard.
+
+Personal goal: portfolio piece to target defense/aerospace engineering
+(Anduril, Thales, MBDA, Dassault, SpaceX). Built by Léo, MPSI student, strong in
+software, learning sensors/embedded/ML.
 
 ---
 
-## 2. Hardware
+## 1. Project status (phases)
 
-### Composants
-- Raspberry Pi 5 (8 GB) + Active Cooler + alim 27W officielle.
-- Radar mmWave **Hi-Link HLK-LD2450** (24 GHz, jusqu'à 3 cibles, distance + angle).
-- Module **HKJL** (breakout/convertisseur du LD2450) + câble JST 4 fils.
-- Convertisseur USB-UART **HLK-CH340E**.
-- **Pi Camera Module 3** (capteur Sony IMX708) via nappe CSI (port J3 / CAM/DISP 0).
+- **Phase 1 — Fixed radar detector + real-time dashboard**: ✅ WORKING
+  Radar physically validated, async UART driver, WebSocket dashboard, SQLite
+  persistence, deployed headless on the Pi.
+- **Phase 2 — Camera + AI + auto-pointing**: ⏳ IN PROGRESS
+  Camera wired and capturing. Slew-to-cue V1 done (radar → auto photo).
+  Vision foundation built (model comparator + real-time detection viewer).
+  Model chosen: **YOLO11n**. Next: run YOLO on the live Pi Camera stream.
+- **Phase 3 — Long range + fusion + multi-target tracking**: 🔜 planned.
 
-### Câblage radar (convention couleur INVERSÉE Hi-Link — vérifiée physiquement)
-| Fil JST | Signal radar | Pin CH340E |
-|---|---|---|
-| Noir | 5V | 5V (broche latérale) |
-| Jaune | GND | GND |
-| Blanc | TX radar | RXT (croisé) |
-| Rouge | RX radar | TXD (croisé) |
+---
 
-⚠️ Noir = 5V et Jaune = GND : inverse de la convention habituelle, mais c'est
-celle de Hi-Link. TX/RX croisés (règle UART).
+## 2. Hardware (what is actually owned)
 
-### Pièges hardware rencontrés / à retenir
-- Ne JAMAIS débrancher le Pi sans `sudo shutdown -h now` (corruption carte SD).
-- Pi 5 : une seule LED « STAT ». Vert = fonctionne, **rouge fixe = halté** (OK pour débrancher).
-- Nappe CSI Pi 5 = connecteur 15 broches (différent des Pi précédents, d'où le câble 22→15).
-- Brancher la nappe caméra Pi ÉTEINT uniquement.
-- Plus tard (servos pan/tilt) : alim séparée pour les servos, jamais sur le 5V du Pi.
+- Raspberry Pi 5 (8 GB) + Active Cooler + official 27W USB-C PSU.
+- Hi-Link **HLK-LD2450** 24 GHz mmWave radar (up to 3 targets, distance + angle,
+  ~8 m range — proximity layer).
+- **HKJL** breakout board + JST cable, **HLK-CH340E** USB-UART converter.
+- **Pi Camera Module 3** (Sony IMX708) via CSI (port J3 / CAM/DISP 0).
+- SanDisk 64GB microSD, breadboard + jumpers, 2× CSI 15→22 pin cables.
+
+**NOT owned**: no Hailo-8 / AI HAT (checked — it was only an Amazon page being
+read aloud). No thermal/IR sensor. No pan/tilt servos yet. No extra radars yet.
+→ YOLO runs on the **Pi 5 CPU only** (~2-5 FPS), which is enough for this use
+case. Code is designed to accept a Hailo NPU later without a rewrite.
+
+### Radar wiring (INVERTED Hi-Link colour convention — physically verified)
+Black = 5V, Yellow = GND, White = radar TX → CH340E RXT, Red = radar RX →
+CH340E TXD. TX/RX crossed. Never unplug the Pi without `sudo shutdown -h now`
+(SD-card corruption risk). Pi 5: single STAT LED — green = running, solid red =
+halted (safe to unplug).
 
 ### Ports
-- Sur le Mac : radar = `/dev/cu.usbserial-11240`.
-- Sur le Pi : radar = `/dev/ttyUSB0` (nécessite `usermod -aG dialout leo` une fois).
+- Mac: radar at `/dev/cu.usbserial-11240`.
+- Pi: radar at `/dev/ttyUSB0` (needs `usermod -aG dialout leo` once).
 
 ---
 
-## 3. Architecture logicielle
+## 3. Software architecture
 
-Repo : github.com/phirou/project-sentinel (public, MIT).
-Local Mac : `~/Developer/project-sentinel` — Local Pi : `~/project-sentinel`.
+Repo: github.com/phirou/project-sentinel (public, MIT).
+Mac: `~/Developer/project-sentinel` — Pi: `~/project-sentinel`.
 
 ```
 sentinel/
-  core/        models.py, event_bus.py, persistence.py, queries.py
-  drivers/     ld2450_parser.py, ld2450_simulator.py, ld2450_driver.py, camera.py
-  consumers/   camera_trigger.py
-  api/         app.py (FastAPI + WebSocket)
-  main.py      orchestration asyncio
-web/           dashboard tactique (HTML/CSS/JS)
-ml/            dataset.py, transforms.py, model.py, train.py, config.yaml
+  core/        models, event_bus, persistence, queries
+  drivers/     ld2450 parser/simulator/uart driver, camera.py
+  consumers/   camera_trigger.py (slew-to-cue)
+  api/         FastAPI app + WebSocket
+  main.py      asyncio orchestration
+web/           tactical dashboard (HTML/CSS/JS)
+ml/            from-scratch PyTorch pipeline (dataset, model, train) + compare_models.py
+tools/
+  detection_viewer/   FastAPI + MJPEG live YOLO viewer (model & source selectors)
+  benchmark/          model benchmark script (FPS, detections, confidence)
 docs/          architecture.md, JOURNAL.md
 ```
 
-### Principes d'archi
-- **EventBus pub/sub** : les producteurs (drivers) publient, les consommateurs
-  (stats, console, persistance SQLite, caméra) s'abonnent. Ajouter un consumer
-  ne touche pas au pipeline.
-- **Inversion de dépendance** radar : simulateur et vrai driver exposent la même
-  interface `stream()`. Le code ne sait pas si c'est simulé ou réel.
-- **Asyncio** : pipeline radar + serveur web + stats sur une seule boucle.
-  Capture caméra déportée en thread (`asyncio.to_thread`) pour ne pas bloquer.
-- Persistance **SQLite** async (aiosqlite), config **YAML** (default + local).
+### Architecture principles
+- **Async EventBus (pub/sub)**: drivers publish, consumers subscribe (console,
+  SQLite, camera trigger, WebSocket). Adding a consumer never touches the pipeline.
+- **Dependency inversion** on the radar source: simulator and real driver expose
+  the same `stream()` interface.
+- **asyncio** single loop; blocking camera capture offloaded via
+  `asyncio.to_thread` so the loop never stalls.
 
-### Bugs marquants résolus
-- **Convention d'axe Y radar** : le LD2450 renvoie Y < 0 DEVANT le radar
-  (inverse de la convention informatique). Sans correction, toutes les cibles
-  apparaissaient à ~180°. Fix : `atan2(x, -y)` dans `models.py`. Validé par
-  mesure physique (face=0°, gauche/droite cohérents).
-- **Shutdown asyncio** : uvicorn interceptait SIGINT. Fix :
-  `server.install_signal_handlers = lambda: None` + annulation explicite.
+### Notable bugs solved
+- **Radar Y-axis convention**: LD2450 returns Y < 0 in front of the sensor
+  (opposite of standard convention). Without the fix all targets showed at ~180°.
+  Fixed with `atan2(x, -y)`, validated by physical measurement.
+- **Asyncio shutdown**: Uvicorn intercepted SIGINT → zombie tasks. Fixed by
+  disabling Uvicorn's signal handlers and managing shutdown explicitly.
 
-### Slew-to-cue (Phase 2)
-`CameraTrigger` (consumer) : sur détection radar → capture caméra non-bloquante,
-avec throttle (cooldown 5s) et nom de fichier encodant la position
-(`T0_d2.3m_a-15deg`) pour lier détection ↔ image (futur dataset ML).
+### Slew-to-cue
+`CameraTrigger` consumer: on radar detection → non-blocking camera capture,
+throttled (5s cooldown), filename encodes target position (`T0_d2.3m_a-15deg`).
 
 ---
 
-## 4. Décisions ML
+## 4. Vision / AI decisions
 
-- **Compute** : entraînement sur **Mac M3** (backend MPS, validé `MPS dispo: True`).
-  Inférence finale visée sur **NPU Hailo-8** du Pi. (train sur machine puissante,
-  inference sur l'embarqué = archi standard.)
-- **Framework** : **PyTorch** (standard industrie défense, support Hailo).
-  NB : PyTorch retiré du venv Pi (lignes ML commentées) — le Pi ne fait pas l'entraînement.
-- **Approche pédagogique** : d'abord un **CNN écrit de zéro** (comprendre conv,
-  pool, fully-connected), PUIS **transfer learning** (MobileNetV3) pour comparer.
-- **Tâche V1** : classification **binaire humain / non-humain**. Conçue pour
-  passer en multi-classes (animal, véhicule) sans refonte (`num_classes` param +
-  dossiers par classe).
-- **Taille d'entrée** : `IMAGE_SIZE = 128` (compromis vitesse/précision). Modifiable
-  en une constante ; le CNN s'adapte via `AdaptiveAvgPool2d`.
-- **Dataset** : bootstrap datasets publics (Penn-Fudan pour humains) + photos
-  Sentinel perso plus tard. Léo veut construire un dataset propre **avec son père**
-  (qui s'y connaît en data). Dossiers : `ml/data/{train,val}/{human,non_human}/`
-  (gitignorés).
+- **Compute**: dev on Mac M-series (MPS). Deploy inference on **Pi 5 CPU** (no NPU).
+- **Pivot** (July): from single-photo classification to **continuous video-stream
+  detection** with a pre-trained YOLO (detects 80 COCO classes: person, car,
+  dog…), covering the "not just humans" need without training.
+- **Model chosen: YOLO11n.** Benchmarked yolov8n / yolov8s / yolo11n over 5 test
+  videos × 2 resolutions. yolo11n = fastest + cleanest detections. yolov8s
+  eliminated (≈2× slower, more false positives — "hallucinated" horses/elephants).
+- **Resolution trade-off**: 640px = fast but misses far targets (hard in forest);
+  1280px = slower but sees distant people. Plan: 640px continuous, 1280px on a
+  radar cue (leverages slew-to-cue instead of fighting it).
+- **Custom CNN** (from-scratch PyTorch, ~155k params) kept for learning + a
+  "built it, then used YOLO understanding what it does" portfolio story. Written,
+  never trained (dataset still empty).
+- **Dataset plan** (with Léo's father, data expert): FiftyOne + Open Images /
+  COCO-2017 (`person`) + Places (scenes), ~6000 images, 50/50, 80/20 split,
+  CC BY 4.0. Curation required (remove humans that appear in "non_human" scenes).
 
-### Concepts ML déjà couverts
-- Léo a suivi la formation deep learning de MachineLearnia (Guillaume Saint-Cirgue,
-  backprop à la main en NumPy). A déjà fait un classifieur Pokémon (probablement Keras).
-- Comprend forward/backward propagation. En PyTorch : forward = méthode `forward()`,
-  backward = `loss.backward()` (autograd automatique). Pas de gradients à la main.
+### Test videos (tools/detection_viewer/videos_test/, gitignored)
+crowd_street_dense · street_cars_pedestrians_far · forest_autumn_2people_path ·
+forest_2people_2dogs_tracking · forest_2people_hiking. Cover density, distance,
+vegetation background (hard case), animals + tracking.
 
-### État des fichiers ML (au 2026-05-22)
-- `dataset.py` ✅ écrit (ImageFolder, `build_dataset`). Testé : trouve les classes,
-  0 image pour l'instant (dossiers vides — normal).
-- `transforms.py` ✅ écrit (train avec augmentation, val sans).
-- `model.py` ✅ écrit (`SentinelCNN`, 3 blocs conv + classifieur, 155k params).
-  Testé avec batch factice → sortie (4, 2) correcte.
-- `train.py` ⏳ à écrire (boucle d'entraînement : forward, loss, backward, step).
-- `config.yaml` ⏳ vide (hyperparamètres à externaliser).
+### Tools built
+- `ml/compare_models.py`: offline model benchmark on a single video.
+- `tools/detection_viewer/`: FastAPI + MJPEG viewer — live annotated feed, hot-
+  swap model & video source, detection thumbnail gallery, live FPS, camera-input
+  stub ready for the Pi Camera / RTSP.
+- `tools/benchmark/`: full model×video×resolution benchmark, results.md output.
 
 ---
 
-## 5. Méthode de travail (préférences de Léo)
+## 5. Working method (Léo's preferences)
 
-- **Pédagogie** : donner le code **par blocs** avec explications, Léo **tape
-  lui-même** (pas de copier-coller aveugle, pas Claude Code pour le ML — c'est
-  la compétence à acquérir). Valider chaque étape avant d'avancer.
-- **Ne pas forcer les pauses** : si Léo dit qu'il continue, on continue.
-- **Validation** : toujours faire exécuter/tester avant de passer à la suite
-  (leçon du « clone fantôme » et des étapes sautées).
-- **Quand un terminal est envoyé et que tout est bon** : réponse courte
-  (« Parfait, aucun problème »), pas de pavé, pas de « next » à sa place.
-- **Toujours préciser** 🍓 Pi vs 💻 Mac pour chaque commande.
-- **Repère prompts** : Pi = `leo@sentinel`, Mac = `leos-Air-001`.
+- Give code in **blocks** with explanations; Léo **types it himself** for ML /
+  vision (skill to acquire) — no blind copy-paste, validate each step.
+- **Claude Code** is fine for plumbing (UI, analysis scripts), NOT for what Léo
+  must learn.
+- Always run/test before moving on.
+- When a terminal is pasted and all is fine: short reply, no wall of text.
+- Always mark 🍓 Pi vs 💻 Mac for each command.
+- Don't push for breaks; if Léo wants to continue, continue.
+- French comments in code. Modular, clean architecture (shown to recruiters).
+- Prompts: Pi = `leo@sentinel`, Mac = `leos-MacBook-Air`.
+
+For model choice on Claude Code prompts: Léo will pick Fable 5 vs Opus; the
+assistant only flags in two words when a task genuinely needs the stronger model.
 
 ---
 
-## 6. Déploiement & exploitation
+## 6. Deployment & ops
 
-- Lancer Sentinel (Pi) : `ssh leo@sentinel.local` → `cd ~/project-sentinel`
-  → `source .venv/bin/activate` → `python -m sentinel.main`.
-- Dashboard : `http://sentinel.local:8000` (ou IP, ex. `http://192.168.1.49:8000`).
-- venv Pi recréé avec `--system-site-packages` (pour accéder à `picamera2` système).
-- WiFi de Lille ajouté au Pi (utilisable en déplacement le week-end).
-- systemd auto-start : **volontairement PAS activé** (Léo veut garder le contrôle
-  du lancement manuel pendant le dev). À faire en fin de projet.
-- Git push depuis le Pi : nécessite un Personal Access Token (PAT), pas le mot de
-  passe. `credential.helper store` activé pour mémoriser.
+- Run radar (Pi): `ssh leo@sentinel.local` → `cd ~/project-sentinel` →
+  `source .venv/bin/activate` → `python -m sentinel.main` →
+  dashboard `http://sentinel.local:8000`.
+- Run detection viewer (Mac): `uvicorn tools.detection_viewer.app:app --port 8100`
+  → `http://localhost:8100`.
+- Pi venv created with `--system-site-packages` (for `picamera2`).
+- Lille Wi-Fi added to the Pi (usable away from home).
+- systemd auto-start deliberately NOT enabled (manual control during dev).
+- Git push from Pi needs a PAT; from Mac uses the SSH key (id_ed25519, passphrase).
+- Videos and model weights are gitignored (keep the repo light — no large binaries).
 
 ---
 
 ## 7. Next steps
 
-1. Écrire `train.py` (boucle d'entraînement) + `config.yaml` (hyperparamètres).
-2. Construire le dataset (datasets publics + aide du père de Léo).
-3. Premier entraînement réel + lecture des courbes (loss/accuracy train vs val).
-4. Transfer learning (MobileNetV3) pour comparer.
-5. Compilation du modèle pour le NPU Hailo (inférence sur Pi).
-6. Brancher la classification dans le pipeline (consumer IA sur les captures).
-7. Plus tard : +1 LD2450 (test multi-radar 360°), servos pan/tilt, dashboard mobile,
-   replay UI, documentation (docs/ld2450-protocol.md).
+1. Wire **YOLO11n onto the live Pi Camera stream** (on the Pi, CPU). The viewer
+   already has a camera-input stub — plug in the real camera. (Needs the Pi.)
+2. Add **ByteTrack** tracking (stable IDs → count unique people/vehicles).
+3. Build the dataset with Léo's father → first CNN training run.
+4. Later modules on the vision core: intrusion zones, flow counting, **vehicle
+   speed estimation** (detection + tracking + distance calibration — possible
+   "sell to cities" angle, Phase 3).
+5. Hardware later (when budget): pan/tilt servos, 2nd LD2450 for wider coverage,
+   thermal/IR for night/forest, optional Hailo NPU.
+6. Housekeeping: update the saved system prompt (remove Hailo/YOLOv8, add video
+   pivot + YOLO11n); mobile-responsive dashboard; docs/ld2450-protocol.md.

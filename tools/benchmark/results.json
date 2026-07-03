@@ -1,0 +1,1110 @@
+{
+  "meta": {
+    "date": "2026-07-03T09:23:24",
+    "device": "mps",
+    "frame_stride": 3,
+    "max_frames_par_video": 0,
+    "conf": 0.25,
+    "resolutions": [
+      640,
+      1280
+    ],
+    "modeles": [
+      "yolov8n.pt",
+      "yolov8s.pt",
+      "yolo11n.pt"
+    ],
+    "duree_totale_s": 296.4,
+    "note_cible": "Benchmark sur MPS ; cible réelle : Raspberry Pi 5 CPU. FPS absolus non transférables ; classement relatif et métriques de détection transférables."
+  },
+  "resume": [
+    {
+      "modele": "yolo11n.pt",
+      "imgsz": 640,
+      "videos": 5,
+      "frames_traitees": 835,
+      "fps_detection": 32.38,
+      "detections_total": 5820,
+      "confiance_moyenne": 0.525,
+      "pct_frames_avec_personne": 91.0,
+      "personnes_par_frame": 4.09
+    },
+    {
+      "modele": "yolov8n.pt",
+      "imgsz": 640,
+      "videos": 5,
+      "frames_traitees": 835,
+      "fps_detection": 26.53,
+      "detections_total": 6467,
+      "confiance_moyenne": 0.529,
+      "pct_frames_avec_personne": 95.7,
+      "personnes_par_frame": 5.06
+    },
+    {
+      "modele": "yolov8s.pt",
+      "imgsz": 640,
+      "videos": 5,
+      "frames_traitees": 835,
+      "fps_detection": 22.99,
+      "detections_total": 6891,
+      "confiance_moyenne": 0.535,
+      "pct_frames_avec_personne": 98.3,
+      "personnes_par_frame": 4.33
+    },
+    {
+      "modele": "yolo11n.pt",
+      "imgsz": 1280,
+      "videos": 5,
+      "frames_traitees": 835,
+      "fps_detection": 15.18,
+      "detections_total": 12368,
+      "confiance_moyenne": 0.569,
+      "pct_frames_avec_personne": 98.2,
+      "personnes_par_frame": 10.63
+    },
+    {
+      "modele": "yolov8n.pt",
+      "imgsz": 1280,
+      "videos": 5,
+      "frames_traitees": 835,
+      "fps_detection": 15.1,
+      "detections_total": 15267,
+      "confiance_moyenne": 0.572,
+      "pct_frames_avec_personne": 98.1,
+      "personnes_par_frame": 13.65
+    },
+    {
+      "modele": "yolov8s.pt",
+      "imgsz": 1280,
+      "videos": 5,
+      "frames_traitees": 835,
+      "fps_detection": 13.92,
+      "detections_total": 14552,
+      "confiance_moyenne": 0.581,
+      "pct_frames_avec_personne": 98.4,
+      "personnes_par_frame": 11.6
+    }
+  ],
+  "detail": [
+    {
+      "modele": "yolov8n.pt",
+      "video": "crowd_street_dense.mp4",
+      "imgsz": 640,
+      "frames_traitees": 237,
+      "fps_detection": 17.4,
+      "ms_par_frame": {
+        "preprocess": 1.54,
+        "inference": 9.44,
+        "postprocess": 45.76
+      },
+      "detections_total": 3613,
+      "detections_par_classe": {
+        "person": 3193,
+        "handbag": 213,
+        "traffic light": 165,
+        "clock": 19,
+        "bus": 17,
+        "backpack": 6
+      },
+      "confiance_moyenne": 0.511,
+      "confiance_par_classe": {
+        "person": 0.527,
+        "traffic light": 0.466,
+        "handbag": 0.338,
+        "clock": 0.337,
+        "backpack": 0.322,
+        "bus": 0.329
+      },
+      "frames_avec_personne": 237,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 13.47,
+      "erreur": null
+    },
+    {
+      "modele": "yolov8n.pt",
+      "video": "forest_2people_2dogs_tracking.mp4",
+      "imgsz": 640,
+      "frames_traitees": 93,
+      "fps_detection": 34.56,
+      "ms_par_frame": {
+        "preprocess": 2.5,
+        "inference": 11.28,
+        "postprocess": 14.25
+      },
+      "detections_total": 207,
+      "detections_par_classe": {
+        "person": 141,
+        "dog": 58,
+        "giraffe": 3,
+        "cow": 2,
+        "bench": 1,
+        "sheep": 1,
+        "bear": 1
+      },
+      "confiance_moyenne": 0.708,
+      "confiance_par_classe": {
+        "person": 0.763,
+        "bench": 0.256,
+        "dog": 0.617,
+        "giraffe": 0.303,
+        "sheep": 0.291,
+        "bear": 0.84,
+        "cow": 0.447
+      },
+      "frames_avec_personne": 93,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 1.52,
+      "erreur": null
+    },
+    {
+      "modele": "yolov8n.pt",
+      "video": "forest_2people_hiking.mp4",
+      "imgsz": 640,
+      "frames_traitees": 77,
+      "fps_detection": 42.93,
+      "ms_par_frame": {
+        "preprocess": 1.4,
+        "inference": 9.72,
+        "postprocess": 11.65
+      },
+      "detections_total": 117,
+      "detections_par_classe": {
+        "person": 116,
+        "motorcycle": 1
+      },
+      "confiance_moyenne": 0.669,
+      "confiance_par_classe": {
+        "person": 0.671,
+        "motorcycle": 0.458
+      },
+      "frames_avec_personne": 62,
+      "pct_frames_avec_personne": 80.5,
+      "personnes_par_frame": 1.51,
+      "erreur": null
+    },
+    {
+      "modele": "yolov8n.pt",
+      "video": "forest_autumn_2people_path.mp4",
+      "imgsz": 640,
+      "frames_traitees": 289,
+      "fps_detection": 41.57,
+      "ms_par_frame": {
+        "preprocess": 2.08,
+        "inference": 9.11,
+        "postprocess": 11.97
+      },
+      "detections_total": 579,
+      "detections_par_classe": {
+        "person": 579
+      },
+      "confiance_moyenne": 0.738,
+      "confiance_par_classe": {
+        "person": 0.738
+      },
+      "frames_avec_personne": 289,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 2.0,
+      "erreur": null
+    },
+    {
+      "modele": "yolov8n.pt",
+      "video": "street_cars_pedestrians_far.mp4",
+      "imgsz": 640,
+      "frames_traitees": 139,
+      "fps_detection": 21.65,
+      "ms_par_frame": {
+        "preprocess": 2.16,
+        "inference": 8.77,
+        "postprocess": 34.37
+      },
+      "detections_total": 1951,
+      "detections_par_classe": {
+        "car": 1325,
+        "truck": 397,
+        "person": 192,
+        "bus": 28,
+        "potted plant": 9
+      },
+      "confiance_moyenne": 0.472,
+      "confiance_par_classe": {
+        "truck": 0.493,
+        "car": 0.474,
+        "person": 0.445,
+        "bus": 0.342,
+        "potted plant": 0.299
+      },
+      "frames_avec_personne": 118,
+      "pct_frames_avec_personne": 84.9,
+      "personnes_par_frame": 1.38,
+      "erreur": null
+    },
+    {
+      "modele": "yolov8n.pt",
+      "video": "crowd_street_dense.mp4",
+      "imgsz": 1280,
+      "frames_traitees": 237,
+      "fps_detection": 8.12,
+      "ms_par_frame": {
+        "preprocess": 2.94,
+        "inference": 14.31,
+        "postprocess": 105.33
+      },
+      "detections_total": 11500,
+      "detections_par_classe": {
+        "person": 10136,
+        "handbag": 865,
+        "traffic light": 272,
+        "motorcycle": 60,
+        "car": 41,
+        "bus": 32,
+        "backpack": 22,
+        "horse": 18,
+        "tennis racket": 16,
+        "suitcase": 13,
+        "clock": 11,
+        "umbrella": 5,
+        "dining table": 5,
+        "elephant": 1,
+        "skateboard": 1,
+        "sports ball": 1,
+        "truck": 1
+      },
+      "confiance_moyenne": 0.569,
+      "confiance_par_classe": {
+        "person": 0.594,
+        "handbag": 0.41,
+        "traffic light": 0.343,
+        "motorcycle": 0.347,
+        "horse": 0.315,
+        "clock": 0.328,
+        "elephant": 0.264,
+        "skateboard": 0.34,
+        "backpack": 0.282,
+        "car": 0.354,
+        "bus": 0.308,
+        "umbrella": 0.319,
+        "tennis racket": 0.446,
+        "suitcase": 0.314,
+        "sports ball": 0.335,
+        "truck": 0.257,
+        "dining table": 0.275
+      },
+      "frames_avec_personne": 237,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 42.77,
+      "erreur": null
+    },
+    {
+      "modele": "yolov8n.pt",
+      "video": "forest_2people_2dogs_tracking.mp4",
+      "imgsz": 1280,
+      "frames_traitees": 93,
+      "fps_detection": 22.42,
+      "ms_par_frame": {
+        "preprocess": 3.73,
+        "inference": 18.3,
+        "postprocess": 21.81
+      },
+      "detections_total": 302,
+      "detections_par_classe": {
+        "person": 176,
+        "dog": 79,
+        "bird": 14,
+        "backpack": 13,
+        "elephant": 9,
+        "giraffe": 5,
+        "bear": 3,
+        "zebra": 1,
+        "cat": 1,
+        "cow": 1
+      },
+      "confiance_moyenne": 0.657,
+      "confiance_par_classe": {
+        "person": 0.737,
+        "dog": 0.646,
+        "bird": 0.437,
+        "zebra": 0.271,
+        "elephant": 0.324,
+        "backpack": 0.341,
+        "giraffe": 0.348,
+        "cat": 0.334,
+        "cow": 0.756,
+        "bear": 0.372
+      },
+      "frames_avec_personne": 93,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 1.89,
+      "erreur": null
+    },
+    {
+      "modele": "yolov8n.pt",
+      "video": "forest_2people_hiking.mp4",
+      "imgsz": 1280,
+      "frames_traitees": 77,
+      "fps_detection": 30.91,
+      "ms_par_frame": {
+        "preprocess": 4.53,
+        "inference": 13.23,
+        "postprocess": 13.96
+      },
+      "detections_total": 140,
+      "detections_par_classe": {
+        "person": 108,
+        "backpack": 29,
+        "fire hydrant": 2,
+        "sports ball": 1
+      },
+      "confiance_moyenne": 0.708,
+      "confiance_par_classe": {
+        "person": 0.786,
+        "backpack": 0.434,
+        "sports ball": 0.718,
+        "fire hydrant": 0.483
+      },
+      "frames_avec_personne": 61,
+      "pct_frames_avec_personne": 79.2,
+      "personnes_par_frame": 1.4,
+      "erreur": null
+    },
+    {
+      "modele": "yolov8n.pt",
+      "video": "forest_autumn_2people_path.mp4",
+      "imgsz": 1280,
+      "frames_traitees": 289,
+      "fps_detection": 32.16,
+      "ms_par_frame": {
+        "preprocess": 3.46,
+        "inference": 13.13,
+        "postprocess": 13.73
+      },
+      "detections_total": 690,
+      "detections_par_classe": {
+        "person": 621,
+        "traffic light": 54,
+        "cow": 14,
+        "horse": 1
+      },
+      "confiance_moyenne": 0.742,
+      "confiance_par_classe": {
+        "person": 0.787,
+        "traffic light": 0.34,
+        "cow": 0.319,
+        "horse": 0.36
+      },
+      "frames_avec_personne": 289,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 2.15,
+      "erreur": null
+    },
+    {
+      "modele": "yolov8n.pt",
+      "video": "street_cars_pedestrians_far.mp4",
+      "imgsz": 1280,
+      "frames_traitees": 139,
+      "fps_detection": 13.28,
+      "ms_par_frame": {
+        "preprocess": 3.73,
+        "inference": 16.9,
+        "postprocess": 53.75
+      },
+      "detections_total": 2635,
+      "detections_par_classe": {
+        "car": 1556,
+        "truck": 518,
+        "person": 353,
+        "bus": 84,
+        "refrigerator": 45,
+        "parking meter": 43,
+        "traffic light": 15,
+        "potted plant": 9,
+        "boat": 9,
+        "oven": 3
+      },
+      "confiance_moyenne": 0.524,
+      "confiance_par_classe": {
+        "car": 0.568,
+        "truck": 0.475,
+        "person": 0.497,
+        "bus": 0.35,
+        "refrigerator": 0.379,
+        "parking meter": 0.374,
+        "oven": 0.275,
+        "potted plant": 0.275,
+        "boat": 0.464,
+        "traffic light": 0.319
+      },
+      "frames_avec_personne": 139,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 2.54,
+      "erreur": null
+    },
+    {
+      "modele": "yolov8s.pt",
+      "video": "crowd_street_dense.mp4",
+      "imgsz": 640,
+      "frames_traitees": 237,
+      "fps_detection": 16.07,
+      "ms_par_frame": {
+        "preprocess": 1.66,
+        "inference": 17.32,
+        "postprocess": 42.55
+      },
+      "detections_total": 3601,
+      "detections_par_classe": {
+        "person": 2546,
+        "handbag": 773,
+        "traffic light": 155,
+        "horse": 63,
+        "clock": 45,
+        "elephant": 7,
+        "motorcycle": 6,
+        "backpack": 3,
+        "bottle": 2,
+        "frisbee": 1
+      },
+      "confiance_moyenne": 0.465,
+      "confiance_par_classe": {
+        "person": 0.492,
+        "handbag": 0.401,
+        "backpack": 0.296,
+        "traffic light": 0.459,
+        "horse": 0.325,
+        "elephant": 0.301,
+        "clock": 0.316,
+        "motorcycle": 0.268,
+        "frisbee": 0.294,
+        "bottle": 0.362
+      },
+      "frames_avec_personne": 237,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 10.74,
+      "erreur": null
+    },
+    {
+      "modele": "yolov8s.pt",
+      "video": "forest_2people_2dogs_tracking.mp4",
+      "imgsz": 640,
+      "frames_traitees": 93,
+      "fps_detection": 27.96,
+      "ms_par_frame": {
+        "preprocess": 2.18,
+        "inference": 17.45,
+        "postprocess": 15.38
+      },
+      "detections_total": 244,
+      "detections_par_classe": {
+        "person": 142,
+        "dog": 96,
+        "backpack": 3,
+        "bird": 1,
+        "giraffe": 1,
+        "baseball glove": 1
+      },
+      "confiance_moyenne": 0.735,
+      "confiance_par_classe": {
+        "person": 0.761,
+        "dog": 0.719,
+        "backpack": 0.381,
+        "bird": 0.367,
+        "giraffe": 0.301,
+        "baseball glove": 0.387
+      },
+      "frames_avec_personne": 93,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 1.53,
+      "erreur": null
+    },
+    {
+      "modele": "yolov8s.pt",
+      "video": "forest_2people_hiking.mp4",
+      "imgsz": 640,
+      "frames_traitees": 77,
+      "fps_detection": 36.88,
+      "ms_par_frame": {
+        "preprocess": 1.45,
+        "inference": 13.06,
+        "postprocess": 11.98
+      },
+      "detections_total": 111,
+      "detections_par_classe": {
+        "person": 109,
+        "backpack": 2
+      },
+      "confiance_moyenne": 0.747,
+      "confiance_par_classe": {
+        "person": 0.755,
+        "backpack": 0.275
+      },
+      "frames_avec_personne": 63,
+      "pct_frames_avec_personne": 81.8,
+      "personnes_par_frame": 1.42,
+      "erreur": null
+    },
+    {
+      "modele": "yolov8s.pt",
+      "video": "forest_autumn_2people_path.mp4",
+      "imgsz": 640,
+      "frames_traitees": 289,
+      "fps_detection": 35.37,
+      "ms_par_frame": {
+        "preprocess": 2.15,
+        "inference": 12.88,
+        "postprocess": 12.42
+      },
+      "detections_total": 578,
+      "detections_par_classe": {
+        "person": 578
+      },
+      "confiance_moyenne": 0.772,
+      "confiance_par_classe": {
+        "person": 0.772
+      },
+      "frames_avec_personne": 289,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 2.0,
+      "erreur": null
+    },
+    {
+      "modele": "yolov8s.pt",
+      "video": "street_cars_pedestrians_far.mp4",
+      "imgsz": 640,
+      "frames_traitees": 139,
+      "fps_detection": 17.39,
+      "ms_par_frame": {
+        "preprocess": 2.0,
+        "inference": 13.99,
+        "postprocess": 40.63
+      },
+      "detections_total": 2357,
+      "detections_par_classe": {
+        "car": 1558,
+        "truck": 376,
+        "person": 240,
+        "potted plant": 137,
+        "bus": 25,
+        "traffic light": 20,
+        "parking meter": 1
+      },
+      "confiance_moyenne": 0.555,
+      "confiance_par_classe": {
+        "car": 0.586,
+        "truck": 0.556,
+        "potted plant": 0.444,
+        "person": 0.444,
+        "bus": 0.428,
+        "parking meter": 0.279,
+        "traffic light": 0.357
+      },
+      "frames_avec_personne": 139,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 1.73,
+      "erreur": null
+    },
+    {
+      "modele": "yolov8s.pt",
+      "video": "crowd_street_dense.mp4",
+      "imgsz": 1280,
+      "frames_traitees": 237,
+      "fps_detection": 8.99,
+      "ms_par_frame": {
+        "preprocess": 3.11,
+        "inference": 26.38,
+        "postprocess": 81.11
+      },
+      "detections_total": 10652,
+      "detections_par_classe": {
+        "person": 8302,
+        "handbag": 1858,
+        "traffic light": 244,
+        "motorcycle": 128,
+        "car": 74,
+        "backpack": 28,
+        "clock": 7,
+        "bus": 5,
+        "frisbee": 3,
+        "cell phone": 2,
+        "umbrella": 1
+      },
+      "confiance_moyenne": 0.559,
+      "confiance_par_classe": {
+        "person": 0.575,
+        "traffic light": 0.734,
+        "handbag": 0.488,
+        "motorcycle": 0.459,
+        "cell phone": 0.433,
+        "clock": 0.289,
+        "car": 0.382,
+        "bus": 0.288,
+        "backpack": 0.328,
+        "frisbee": 0.34,
+        "umbrella": 0.251
+      },
+      "frames_avec_personne": 237,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 35.03,
+      "erreur": null
+    },
+    {
+      "modele": "yolov8s.pt",
+      "video": "forest_2people_2dogs_tracking.mp4",
+      "imgsz": 1280,
+      "frames_traitees": 93,
+      "fps_detection": 16.63,
+      "ms_par_frame": {
+        "preprocess": 4.23,
+        "inference": 28.39,
+        "postprocess": 26.58
+      },
+      "detections_total": 324,
+      "detections_par_classe": {
+        "person": 177,
+        "dog": 102,
+        "backpack": 30,
+        "bird": 8,
+        "bear": 5,
+        "giraffe": 1,
+        "zebra": 1
+      },
+      "confiance_moyenne": 0.721,
+      "confiance_par_classe": {
+        "person": 0.78,
+        "dog": 0.747,
+        "bear": 0.464,
+        "giraffe": 0.497,
+        "bird": 0.496,
+        "zebra": 0.257,
+        "backpack": 0.412
+      },
+      "frames_avec_personne": 93,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 1.9,
+      "erreur": null
+    },
+    {
+      "modele": "yolov8s.pt",
+      "video": "forest_2people_hiking.mp4",
+      "imgsz": 1280,
+      "frames_traitees": 77,
+      "fps_detection": 20.42,
+      "ms_par_frame": {
+        "preprocess": 4.09,
+        "inference": 25.52,
+        "postprocess": 18.92
+      },
+      "detections_total": 152,
+      "detections_par_classe": {
+        "person": 111,
+        "backpack": 40,
+        "sports ball": 1
+      },
+      "confiance_moyenne": 0.778,
+      "confiance_par_classe": {
+        "person": 0.813,
+        "backpack": 0.689,
+        "sports ball": 0.396
+      },
+      "frames_avec_personne": 64,
+      "pct_frames_avec_personne": 83.1,
+      "personnes_par_frame": 1.44,
+      "erreur": null
+    },
+    {
+      "modele": "yolov8s.pt",
+      "video": "forest_autumn_2people_path.mp4",
+      "imgsz": 1280,
+      "frames_traitees": 289,
+      "fps_detection": 20.5,
+      "ms_par_frame": {
+        "preprocess": 3.94,
+        "inference": 25.03,
+        "postprocess": 19.08
+      },
+      "detections_total": 670,
+      "detections_par_classe": {
+        "person": 579,
+        "traffic light": 91
+      },
+      "confiance_moyenne": 0.745,
+      "confiance_par_classe": {
+        "person": 0.807,
+        "traffic light": 0.355
+      },
+      "frames_avec_personne": 289,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 2.0,
+      "erreur": null
+    },
+    {
+      "modele": "yolov8s.pt",
+      "video": "street_cars_pedestrians_far.mp4",
+      "imgsz": 1280,
+      "frames_traitees": 139,
+      "fps_detection": 13.71,
+      "ms_par_frame": {
+        "preprocess": 3.21,
+        "inference": 23.78,
+        "postprocess": 45.31
+      },
+      "detections_total": 2754,
+      "detections_par_classe": {
+        "car": 1553,
+        "person": 515,
+        "truck": 502,
+        "potted plant": 62,
+        "oven": 41,
+        "bus": 30,
+        "bicycle": 18,
+        "traffic light": 17,
+        "stop sign": 9,
+        "horse": 3,
+        "clock": 2,
+        "parking meter": 1,
+        "bird": 1
+      },
+      "confiance_moyenne": 0.596,
+      "confiance_par_classe": {
+        "car": 0.675,
+        "truck": 0.571,
+        "person": 0.469,
+        "bus": 0.368,
+        "oven": 0.344,
+        "traffic light": 0.306,
+        "potted plant": 0.351,
+        "parking meter": 0.259,
+        "horse": 0.379,
+        "bicycle": 0.34,
+        "clock": 0.275,
+        "stop sign": 0.342,
+        "bird": 0.305
+      },
+      "frames_avec_personne": 139,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 3.71,
+      "erreur": null
+    },
+    {
+      "modele": "yolo11n.pt",
+      "video": "crowd_street_dense.mp4",
+      "imgsz": 640,
+      "frames_traitees": 237,
+      "fps_detection": 23.53,
+      "ms_par_frame": {
+        "preprocess": 1.28,
+        "inference": 10.47,
+        "postprocess": 30.15
+      },
+      "detections_total": 2941,
+      "detections_par_classe": {
+        "person": 2491,
+        "handbag": 272,
+        "clock": 91,
+        "traffic light": 77,
+        "backpack": 9,
+        "bus": 1
+      },
+      "confiance_moyenne": 0.534,
+      "confiance_par_classe": {
+        "person": 0.567,
+        "handbag": 0.339,
+        "clock": 0.342,
+        "traffic light": 0.432,
+        "backpack": 0.306,
+        "bus": 0.25
+      },
+      "frames_avec_personne": 237,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 10.51,
+      "erreur": null
+    },
+    {
+      "modele": "yolo11n.pt",
+      "video": "forest_2people_2dogs_tracking.mp4",
+      "imgsz": 640,
+      "frames_traitees": 93,
+      "fps_detection": 38.92,
+      "ms_par_frame": {
+        "preprocess": 2.27,
+        "inference": 12.25,
+        "postprocess": 10.44
+      },
+      "detections_total": 201,
+      "detections_par_classe": {
+        "person": 137,
+        "dog": 59,
+        "bird": 3,
+        "giraffe": 1,
+        "sheep": 1
+      },
+      "confiance_moyenne": 0.646,
+      "confiance_par_classe": {
+        "person": 0.738,
+        "dog": 0.457,
+        "giraffe": 0.343,
+        "sheep": 0.256,
+        "bird": 0.403
+      },
+      "frames_avec_personne": 93,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 1.47,
+      "erreur": null
+    },
+    {
+      "modele": "yolo11n.pt",
+      "video": "forest_2people_hiking.mp4",
+      "imgsz": 640,
+      "frames_traitees": 77,
+      "fps_detection": 55.06,
+      "ms_par_frame": {
+        "preprocess": 1.18,
+        "inference": 8.28,
+        "postprocess": 8.26
+      },
+      "detections_total": 115,
+      "detections_par_classe": {
+        "person": 107,
+        "fire hydrant": 5,
+        "umbrella": 2,
+        "backpack": 1
+      },
+      "confiance_moyenne": 0.603,
+      "confiance_par_classe": {
+        "person": 0.616,
+        "umbrella": 0.361,
+        "backpack": 0.263,
+        "fire hydrant": 0.475
+      },
+      "frames_avec_personne": 59,
+      "pct_frames_avec_personne": 76.6,
+      "personnes_par_frame": 1.39,
+      "erreur": null
+    },
+    {
+      "modele": "yolo11n.pt",
+      "video": "forest_autumn_2people_path.mp4",
+      "imgsz": 640,
+      "frames_traitees": 289,
+      "fps_detection": 47.43,
+      "ms_par_frame": {
+        "preprocess": 1.97,
+        "inference": 9.39,
+        "postprocess": 8.95
+      },
+      "detections_total": 586,
+      "detections_par_classe": {
+        "person": 585,
+        "traffic light": 1
+      },
+      "confiance_moyenne": 0.694,
+      "confiance_par_classe": {
+        "person": 0.695,
+        "traffic light": 0.252
+      },
+      "frames_avec_personne": 289,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 2.02,
+      "erreur": null
+    },
+    {
+      "modele": "yolo11n.pt",
+      "video": "street_cars_pedestrians_far.mp4",
+      "imgsz": 640,
+      "frames_traitees": 139,
+      "fps_detection": 23.83,
+      "ms_par_frame": {
+        "preprocess": 1.82,
+        "inference": 9.42,
+        "postprocess": 29.91
+      },
+      "detections_total": 1977,
+      "detections_par_classe": {
+        "car": 1517,
+        "truck": 292,
+        "person": 98,
+        "potted plant": 53,
+        "bus": 11,
+        "boat": 6
+      },
+      "confiance_moyenne": 0.444,
+      "confiance_par_classe": {
+        "truck": 0.411,
+        "car": 0.457,
+        "person": 0.399,
+        "potted plant": 0.369,
+        "bus": 0.378,
+        "boat": 0.366
+      },
+      "frames_avec_personne": 82,
+      "pct_frames_avec_personne": 59.0,
+      "personnes_par_frame": 0.71,
+      "erreur": null
+    },
+    {
+      "modele": "yolo11n.pt",
+      "video": "crowd_street_dense.mp4",
+      "imgsz": 1280,
+      "frames_traitees": 237,
+      "fps_detection": 9.27,
+      "ms_par_frame": {
+        "preprocess": 2.83,
+        "inference": 20.06,
+        "postprocess": 84.35
+      },
+      "detections_total": 8872,
+      "detections_par_classe": {
+        "person": 7742,
+        "handbag": 871,
+        "traffic light": 199,
+        "elephant": 32,
+        "bus": 21,
+        "backpack": 4,
+        "skateboard": 2,
+        "tennis racket": 1
+      },
+      "confiance_moyenne": 0.557,
+      "confiance_par_classe": {
+        "person": 0.581,
+        "handbag": 0.381,
+        "traffic light": 0.426,
+        "elephant": 0.502,
+        "backpack": 0.271,
+        "bus": 0.311,
+        "tennis racket": 0.39,
+        "skateboard": 0.357
+      },
+      "frames_avec_personne": 237,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 32.67,
+      "erreur": null
+    },
+    {
+      "modele": "yolo11n.pt",
+      "video": "forest_2people_2dogs_tracking.mp4",
+      "imgsz": 1280,
+      "frames_traitees": 93,
+      "fps_detection": 22.43,
+      "ms_par_frame": {
+        "preprocess": 3.17,
+        "inference": 22.6,
+        "postprocess": 18.06
+      },
+      "detections_total": 243,
+      "detections_par_classe": {
+        "person": 149,
+        "dog": 50,
+        "bird": 19,
+        "backpack": 15,
+        "bear": 5,
+        "sports ball": 4,
+        "cow": 1
+      },
+      "confiance_moyenne": 0.656,
+      "confiance_par_classe": {
+        "person": 0.795,
+        "dog": 0.485,
+        "bird": 0.37,
+        "backpack": 0.356,
+        "bear": 0.442,
+        "cow": 0.764,
+        "sports ball": 0.366
+      },
+      "frames_avec_personne": 93,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 1.6,
+      "erreur": null
+    },
+    {
+      "modele": "yolo11n.pt",
+      "video": "forest_2people_hiking.mp4",
+      "imgsz": 1280,
+      "frames_traitees": 77,
+      "fps_detection": 24.08,
+      "ms_par_frame": {
+        "preprocess": 4.86,
+        "inference": 18.95,
+        "postprocess": 16.79
+      },
+      "detections_total": 148,
+      "detections_par_classe": {
+        "person": 109,
+        "backpack": 37,
+        "fire hydrant": 2
+      },
+      "confiance_moyenne": 0.703,
+      "confiance_par_classe": {
+        "person": 0.802,
+        "backpack": 0.433,
+        "fire hydrant": 0.283
+      },
+      "frames_avec_personne": 62,
+      "pct_frames_avec_personne": 80.5,
+      "personnes_par_frame": 1.42,
+      "erreur": null
+    },
+    {
+      "modele": "yolo11n.pt",
+      "video": "forest_autumn_2people_path.mp4",
+      "imgsz": 1280,
+      "frames_traitees": 289,
+      "fps_detection": 26.69,
+      "ms_par_frame": {
+        "preprocess": 3.28,
+        "inference": 18.22,
+        "postprocess": 15.2
+      },
+      "detections_total": 591,
+      "detections_par_classe": {
+        "person": 578,
+        "horse": 7,
+        "cow": 5,
+        "traffic light": 1
+      },
+      "confiance_moyenne": 0.786,
+      "confiance_par_classe": {
+        "person": 0.796,
+        "horse": 0.331,
+        "traffic light": 0.301,
+        "cow": 0.299
+      },
+      "frames_avec_personne": 289,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 2.0,
+      "erreur": null
+    },
+    {
+      "modele": "yolo11n.pt",
+      "video": "street_cars_pedestrians_far.mp4",
+      "imgsz": 1280,
+      "frames_traitees": 139,
+      "fps_detection": 12.34,
+      "ms_par_frame": {
+        "preprocess": 3.45,
+        "inference": 24.21,
+        "postprocess": 52.52
+      },
+      "detections_total": 2514,
+      "detections_par_classe": {
+        "car": 1591,
+        "truck": 457,
+        "person": 297,
+        "bus": 99,
+        "potted plant": 60,
+        "bicycle": 7,
+        "traffic light": 3
+      },
+      "confiance_moyenne": 0.546,
+      "confiance_par_classe": {
+        "truck": 0.494,
+        "car": 0.588,
+        "person": 0.526,
+        "bus": 0.317,
+        "traffic light": 0.277,
+        "potted plant": 0.341,
+        "bicycle": 0.322
+      },
+      "frames_avec_personne": 139,
+      "pct_frames_avec_personne": 100.0,
+      "personnes_par_frame": 2.14,
+      "erreur": null
+    }
+  ]
+}
