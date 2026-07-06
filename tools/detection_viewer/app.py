@@ -23,6 +23,8 @@ Endpoints :
     GET  /sources     sources vidéo disponibles (videos_test/ + caméra)
     POST /set_model   changement de modèle à chaud, ex. {"model": "yolov8s"}
     POST /set_source  changement de source à chaud, ex. {"source": "camera"}
+    POST /set_tracking active/désactive le tracking, ex. {"enabled": true}
+    POST /reset_counts remet à zéro les compteurs d'objets uniques
 """
 
 import base64
@@ -30,7 +32,7 @@ import itertools
 import logging
 import threading
 import time
-from collections import deque
+from collections import deque, defaultdict
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -73,11 +75,20 @@ MODELES = {
     "yolov8s": "yolov8s.pt",
     "yolo11n": "yolo11n.pt",
 }
-MODELE_PAR_DEFAUT = "yolov8n"
+MODELE_PAR_DEFAUT = "yolo11n"  # modèle retenu à l'issue du benchmark
 
 SEUIL_CONFIANCE = 0.4       # score minimal pour retenir une détection
 LARGEUR_MAX_FLUX = 1280     # les frames plus larges sont réduites (bande passante)
 QUALITE_JPEG = 80           # qualité d'encodage du flux MJPEG
+
+# Tracking multi-objets (ByteTrack, inclus dans ultralytics — aucune dépendance
+# supplémentaire). persist=True conserve les IDs d'une frame à l'autre.
+TRACKER_YAML = "bytetrack.yaml"     # configuration du tracker fournie par ultralytics
+MODE_TRACKING_PAR_DEFAUT = True     # démarrage en mode tracking (togglable dans l'UI)
+LONGUEUR_TRACE = 30                 # nb de positions gardées pour la trace de trajectoire
+EPAISSEUR_TRACE = 2                 # épaisseur du tracé de trajectoire
+SEUIL_SAUT_TRACE = 120              # px : au-delà, on considère un saut (ID réattribué,
+                                    # rebouclage vidéo…) et on repart d'une trace vierge
 
 INTERVALLE_VIGNETTES = 1.0  # au plus une passe d'extraction de crops par seconde
 MAX_VIGNETTES = 20          # nombre de vignettes gardées en mémoire
@@ -128,6 +139,11 @@ class EtatPartage:
         self.source_demandee: str | None = None  # changement demandé via /set_source
         self.vignettes: deque[dict] = deque(maxlen=MAX_VIGNETTES)  # récentes en tête
         self.ids = itertools.count(1)  # identifiants croissants des vignettes
+
+        # --- Tracking ---
+        self.mode_tracking: bool = MODE_TRACKING_PAR_DEFAUT     # tracking actif, ou détection simple
+        self.ids_par_classe: dict[str, set] = defaultdict(set)  # classe → IDs de tracking distincts vus
+        self.reset_demande: bool = False   # remise à zéro des compteurs demandée via /reset_counts
 
 
 etat = EtatPartage()
@@ -245,27 +261,92 @@ def frame_message(texte: str) -> np.ndarray:
     return img
 
 
-def extraire_boites(resultat) -> list[tuple[int, int, int, int, str, float]]:
-    """Convertit un résultat ultralytics en liste (x1, y1, x2, y2, classe, conf)."""
+def extraire_boites(resultat, avec_id: bool = True) -> list[tuple]:
+    """Convertit un résultat ultralytics en liste (x1, y1, x2, y2, classe, conf, id).
+
+    ``id`` est l'identifiant de tracking (entier) en mode tracking, ou ``None``
+    sinon. On force ``avec_id=False`` en détection simple : ultralytics laisse
+    ses callbacks de tracking attachés au modèle après le premier appel à
+    ``track()``, si bien que ``predict()`` continuerait à renseigner ``boite.id`` —
+    on l'ignore donc explicitement pour que la « détection simple » n'affiche
+    réellement aucun ID.
+    """
     boites = []
     for boite in resultat.boxes:
         x1, y1, x2, y2 = (int(v) for v in boite.xyxy[0].tolist())
         nom = resultat.names[int(boite.cls[0])]
-        boites.append((x1, y1, x2, y2, nom, float(boite.conf[0])))
+        conf = float(boite.conf[0])
+        track_id = int(boite.id[0]) if (avec_id and boite.id is not None) else None
+        boites.append((x1, y1, x2, y2, nom, conf, track_id))
     return boites
 
 
 def dessiner_detections(frame: np.ndarray, boites: list) -> None:
-    """Dessine les boîtes et leurs étiquettes (classe + confiance) sur la frame."""
-    for x1, y1, x2, y2, nom, conf in boites:
+    """Dessine les boîtes + étiquettes (classe + ID de tracking + confiance)."""
+    for x1, y1, x2, y2, nom, conf, track_id in boites:
         couleur = COULEUR_PERSONNE if nom == "person" else COULEUR_AUTRE
         cv2.rectangle(frame, (x1, y1), (x2, y2), couleur, 2)
-        etiquette = f"{nom} {conf:.2f}"
+        # En mode tracking, l'ID stable est ajouté à l'étiquette (ex. "person #4").
+        base = f"{nom} #{track_id}" if track_id is not None else nom
+        etiquette = f"{base} {conf:.2f}"
         (largeur, hauteur), _ = cv2.getTextSize(etiquette, POLICE, 0.5, 1)
         # Étiquette au-dessus de la boîte, ou en dessous du bord si trop haut.
         y_texte = y1 - 6 if y1 - hauteur - 10 >= 0 else y1 + hauteur + 8
         cv2.rectangle(frame, (x1, y_texte - hauteur - 4), (x1 + largeur + 6, y_texte + 4), couleur, -1)
         cv2.putText(frame, etiquette, (x1 + 3, y_texte), POLICE, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+
+
+def dessiner_traces(frame: np.ndarray, traces: dict) -> None:
+    """Dessine la trajectoire récente (centre des objets) de chaque objet suivi."""
+    for trace in traces.values():
+        points = trace["points"]
+        if len(points) < 2:
+            continue
+        cv2.polylines(frame, [np.array(points, dtype=np.int32)], False,
+                      trace["couleur"], EPAISSEUR_TRACE, cv2.LINE_AA)
+
+
+def mettre_a_jour_suivi(boites: list, traces: dict, frame_idx: int) -> None:
+    """Met à jour compteurs d'IDs uniques et traces de trajectoire (mode tracking).
+
+    - Compteurs : chaque ID de tracking est ajouté au set de sa classe ; le
+      nombre d'objets uniques par classe vaut donc len(set) — un même objet
+      suivi ne compte qu'une fois, contrairement au cumul des détections.
+    - Traces : on mémorise le centre de chaque objet sur ses LONGUEUR_TRACE
+      dernières positions ; les objets disparus depuis longtemps sont purgés
+      pour éviter que le dictionnaire ne grossisse indéfiniment.
+    """
+    # Compteurs d'IDs uniques par classe (état partagé avec les endpoints).
+    with etat.verrou:
+        for x1, y1, x2, y2, nom, conf, track_id in boites:
+            if track_id is not None:
+                etat.ids_par_classe[nom].add(track_id)
+
+    # Traces de trajectoire (état local au thread : aucun verrou nécessaire).
+    for x1, y1, x2, y2, nom, conf, track_id in boites:
+        if track_id is None:
+            continue
+        centre = ((x1 + x2) // 2, (y1 + y2) // 2)
+        couleur = COULEUR_PERSONNE if nom == "person" else COULEUR_AUTRE
+        trace = traces.get(track_id)
+        if trace is None:
+            trace = {"points": deque(maxlen=LONGUEUR_TRACE), "couleur": couleur, "vu": frame_idx}
+            traces[track_id] = trace
+        points = trace["points"]
+        # Discontinuité (ID réattribué à un autre objet, rebouclage vidéo…) : on
+        # repart d'une trace vierge plutôt que de tracer une longue ligne parasite.
+        if points:
+            dx, dy = centre[0] - points[-1][0], centre[1] - points[-1][1]
+            if dx * dx + dy * dy > SEUIL_SAUT_TRACE ** 2:
+                points.clear()
+        points.append(centre)
+        trace["couleur"] = couleur
+        trace["vu"] = frame_idx
+
+    # Purge des traces d'objets sortis du champ depuis un moment.
+    perimes = [tid for tid, tr in traces.items() if frame_idx - tr["vu"] > LONGUEUR_TRACE]
+    for tid in perimes:
+        del traces[tid]
 
 
 def redimensionner_vignette(crop: np.ndarray) -> np.ndarray:
@@ -285,7 +366,7 @@ def capturer_vignettes(frame: np.ndarray, boites: list) -> None:
     d'une vignette par seconde — sans nécessiter de tracking.
     """
     hauteur, largeur = frame.shape[:2]
-    for x1, y1, x2, y2, nom, conf in boites:
+    for x1, y1, x2, y2, nom, conf, _track_id in boites:
         # Coordonnées bornées à l'image, boîtes dégénérées ignorées.
         x1, y1 = max(0, x1), max(0, y1)
         x2, y2 = min(largeur, x2), min(hauteur, y2)
@@ -339,6 +420,25 @@ def boucle_inference() -> None:
     fps_lisse = 0.0
     derniere_passe_vignettes = 0.0
 
+    # --- État local du suivi (tracking) --------------------------------
+    traces: dict[int, dict] = {}        # ID de tracking → trajectoire récente
+    frame_idx = 0                       # compteur de frames (pour purger les traces)
+    mode_precedent: bool | None = None  # détecte le basculement du toggle tracking
+    reinit_tracker = False              # force persist=False à la prochaine passe track()
+
+    def reinitialiser_suivi() -> None:
+        """Repart de zéro : vide traces, compteurs d'IDs et réinitialise ByteTrack.
+
+        Appelée quand le modèle, la source ou le mode change, ou sur demande de
+        l'utilisateur (bouton « Reset »), pour que les IDs et les comptages ne se
+        mélangent jamais d'une vidéo (ou d'un modèle) à l'autre.
+        """
+        nonlocal reinit_tracker
+        traces.clear()
+        reinit_tracker = True  # la prochaine passe track() utilisera persist=False (reset ByteTrack)
+        with etat.verrou:
+            etat.ids_par_classe.clear()
+
     while not etat.arret.is_set():
         debut = time.perf_counter()
 
@@ -357,6 +457,7 @@ def boucle_inference() -> None:
                 with etat.verrou:
                     etat.modele_actuel = demande
                     etat.modele_demande = None
+                reinitialiser_suivi()  # nouveau modèle → tracker et compteurs repartent de zéro
             except Exception as exc:
                 logger.error("Échec du chargement de « %s » : %s", demande, exc)
                 with etat.verrou:
@@ -381,6 +482,7 @@ def boucle_inference() -> None:
             with etat.verrou:
                 etat.source_actuelle = source_visee
                 etat.source_demandee = None
+            reinitialiser_suivi()  # nouvelle vidéo → les IDs de tracking repartent de zéro
 
         # --- Ouverture (ou réouverture) de la source vidéo ------------------
         if cap is None or not cap.isOpened():
@@ -398,6 +500,17 @@ def boucle_inference() -> None:
                 continue
             echec_source_signale = False
 
+        # --- Mode tracking + réinitialisations demandées à chaud ------------
+        with etat.verrou:
+            mode_tracking = etat.mode_tracking
+            reset_demande = etat.reset_demande
+            etat.reset_demande = False
+        if mode_precedent is None:
+            mode_precedent = mode_tracking
+        if mode_tracking != mode_precedent or reset_demande:
+            reinitialiser_suivi()   # bascule du toggle ou clic « Reset » → on repart de zéro
+            mode_precedent = mode_tracking
+
         # --- Lecture d'une frame, avec rebouclage en fin de vidéo -----------
         ok, frame = cap.read()
         if not ok:
@@ -411,13 +524,31 @@ def boucle_inference() -> None:
         # --- Inférence + annotation + publication ---------------------------
         try:
             frame = reduire_si_besoin(frame)
-            resultat = modele.predict(frame, conf=SEUIL_CONFIANCE, device=DEVICE, verbose=False)[0]
-            boites = extraire_boites(resultat)
+            if mode_tracking:
+                # Tracking ByteTrack : persist=True conserve les IDs entre frames ;
+                # persist=False (une seule frame) réinitialise proprement le tracker.
+                resultat = modele.track(
+                    frame, conf=SEUIL_CONFIANCE, device=DEVICE,
+                    persist=not reinit_tracker, tracker=TRACKER_YAML, verbose=False,
+                )[0]
+                reinit_tracker = False
+            else:
+                # Mode détection simple (sans ID), pour comparer avec le tracking.
+                resultat = modele.predict(frame, conf=SEUIL_CONFIANCE, device=DEVICE, verbose=False)[0]
+            # avec_id=False en détection : on n'affiche jamais d'ID hors mode tracking.
+            boites = extraire_boites(resultat, avec_id=mode_tracking)
 
             # Vignettes : au plus une passe par seconde, sur la frame propre.
             if boites and debut - derniere_passe_vignettes >= INTERVALLE_VIGNETTES:
                 capturer_vignettes(frame, boites)
                 derniere_passe_vignettes = debut
+
+            # Tracking : compteurs d'IDs uniques + traces de trajectoire
+            # (dessinées sous les boîtes pour rester lisibles).
+            if mode_tracking:
+                frame_idx += 1
+                mettre_a_jour_suivi(boites, traces, frame_idx)
+                dessiner_traces(frame, traces)
 
             dessiner_detections(frame, boites)
 
@@ -509,6 +640,9 @@ async def detections() -> dict:
 async def stats() -> dict:
     """Statistiques temps réel affichées dans la barre du haut."""
     with etat.verrou:
+        # Objets uniques par classe, triés du plus fréquent au moins fréquent.
+        uniques = {classe: len(ids) for classe, ids in etat.ids_par_classe.items() if ids}
+        uniques = dict(sorted(uniques.items(), key=lambda kv: -kv[1]))
         return {
             "fps": round(etat.fps, 1),
             "modele": etat.modele_actuel,
@@ -518,6 +652,8 @@ async def stats() -> dict:
             "source": etat.source_actuelle,
             "source_en_chargement": etat.source_demandee,
             "modeles": list(MODELES),
+            "mode_tracking": etat.mode_tracking,
+            "uniques": uniques,
         }
 
 
@@ -560,6 +696,32 @@ async def set_source(requete: RequeteSource) -> dict:
         if not deja_active:
             etat.source_demandee = ident
     return {"ok": True, "source": ident, "statut": "déjà active" if deja_active else "changement en cours"}
+
+
+class RequeteTracking(BaseModel):
+    """Corps attendu par POST /set_tracking."""
+
+    enabled: bool
+
+
+@app.post("/set_tracking")
+async def set_tracking(requete: RequeteTracking) -> dict:
+    """Active/désactive le tracking (bascule « détection simple » ↔ « tracking »).
+
+    Le thread d'inférence détecte le changement et réinitialise proprement le
+    tracker et les compteurs au basculement.
+    """
+    with etat.verrou:
+        etat.mode_tracking = requete.enabled
+    return {"ok": True, "mode_tracking": requete.enabled}
+
+
+@app.post("/reset_counts")
+async def reset_counts() -> dict:
+    """Remet à zéro les compteurs d'objets uniques et le set d'IDs de tracking."""
+    with etat.verrou:
+        etat.reset_demande = True
+    return {"ok": True}
 
 
 if __name__ == "__main__":

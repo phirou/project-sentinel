@@ -9,7 +9,13 @@ des objets détectés.
 
 - Flux vidéo annoté en direct (MJPEG, lisible par une simple balise `<img>`) ;
 - Boîtes de détection colorées : vert phosphore pour `person`, orange pour les
-  autres classes, avec étiquette « classe + confiance » ;
+  autres classes, avec étiquette « classe + ID de tracking + confiance » ;
+- **Tracking multi-objets (ByteTrack, inclus dans ultralytics)** : chaque objet
+  reçoit un ID stable entre les frames (ex. `person #4`), avec une courte trace
+  de trajectoire. Un **compteur d'objets uniques par classe** (basé sur les IDs
+  distincts vus, pas le cumul de détections) s'affiche dans la barre du haut, et
+  un bouton **Reset** remet les compteurs à zéro. Le tracking est **activable /
+  désactivable** (toggle « détection simple ↔ tracking ») pour comparer ;
 - Changement de modèle **à chaud** (yolov8n / yolov8s / yolo11n), sans
   redémarrer le serveur ;
 - Changement de **source vidéo à chaud** : vidéos du dossier `videos_test/`
@@ -41,10 +47,12 @@ dans un onglet).
 | GET     | `/`           | Page web                                                 |
 | GET     | `/video_feed` | Flux MJPEG annoté (`multipart/x-mixed-replace`)          |
 | GET     | `/detections` | Vignettes récentes (JSON : image base64, classe, confiance, heure) |
-| GET     | `/stats`      | FPS d'inférence, modèle et source courants, device, nb d'objets |
+| GET     | `/stats`      | FPS, modèle et source courants, device, nb d'objets, mode tracking, objets uniques par classe |
 | GET     | `/sources`    | Sources vidéo disponibles (`videos_test/` + caméra)      |
 | POST    | `/set_model`  | Changement de modèle, corps `{"model": "yolov8s"}`       |
 | POST    | `/set_source` | Changement de source, corps `{"source": "camera"}`       |
+| POST    | `/set_tracking` | Active/désactive le tracking, corps `{"enabled": true}` |
+| POST    | `/reset_counts` | Remet à zéro les compteurs d'objets uniques            |
 
 La documentation interactive FastAPI est disponible sur `/docs`.
 
@@ -55,14 +63,22 @@ La documentation interactive FastAPI est disponible sur `/docs`.
   ne font que lire un état partagé protégé par verrou.
 - Les clients MJPEG sont réveillés par une `Condition` à chaque nouvelle
   frame : pas d'attente active.
+- **Tracking** : ByteTrack tourne dans le même thread via
+  `model.track(persist=True)` ; le tracker et les compteurs sont réinitialisés
+  proprement à chaque changement de source, de modèle ou de mode (une passe
+  `persist=False` réinitialise ByteTrack). Les compteurs d'objets uniques sont
+  des `set` d'IDs par classe, protégés par le verrou d'état.
 - **Front 100 % autonome** (HTML/CSS/JS vanilla, aucun framework) : la page ne
-  dépend du backend qu'à travers les 4 endpoints ci-dessus. Pour l'héberger
-  sur un site externe, renseigner la constante `API_BASE` en tête du script
-  de `templates/index.html` — le backend autorise déjà le CORS.
+  dépend du backend qu'à travers ses endpoints (voir table ci-dessus). Pour
+  l'héberger sur un site externe, renseigner la constante `API_BASE` en tête du
+  script de `templates/index.html` — le backend autorise déjà le CORS.
 
 ## Configuration
 
 Les réglages sont des constantes en tête de `app.py` : `VIDEO_SOURCE` (source
 par défaut au démarrage), `DOSSIER_VIDEOS`, `CIBLE_CAMERA` (index webcam,
-remplaçable par une URL RTSP pour la Pi Camera), `MODELES`, `SEUIL_CONFIANCE`,
-`INTERVALLE_VIGNETTES`, `MAX_VIGNETTES`, couleurs, etc.
+remplaçable par une URL RTSP pour la Pi Camera), `MODELES`, `MODELE_PAR_DEFAUT`
+(`yolo11n`, retenu à l'issue du benchmark), `SEUIL_CONFIANCE`, et pour le
+tracking : `MODE_TRACKING_PAR_DEFAUT`, `TRACKER_YAML`, `LONGUEUR_TRACE`,
+`SEUIL_SAUT_TRACE` (seuil anti-lignes parasites des traces), `INTERVALLE_VIGNETTES`,
+`MAX_VIGNETTES`, couleurs, etc.

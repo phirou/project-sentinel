@@ -143,6 +143,22 @@ header {
   animation: pulse 1.6s ease-in-out infinite;
 }
 
+/* Compteur d'objets uniques (tracking) : liste "12 person, 3 car" tronquée
+   si trop longue (le survol via l'attribut title montre le détail complet). */
+#uniques {
+  max-width: 220px;
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  font-size: 12px;
+}
+#uniques.off { color: var(--texte-2); text-shadow: none; }  /* tracking désactivé */
+
+/* Bouton « Reset » : accent orange au survol, pour le distinguer du toggle. */
+#btn-reset:hover { color: var(--orange); border-color: var(--orange); }
+
 /* ---------------- Disposition principale ---------------- */
 main {
   flex: 1;
@@ -266,10 +282,17 @@ main {
     <select id="selecteur-source" aria-label="Choix de la source vidéo"></select>
   </div>
 
+  <!-- Tracking : toggle « détection simple ↔ tracking » + remise à zéro -->
+  <nav class="selecteur" aria-label="Contrôles de tracking">
+    <button id="btn-tracking" title="Activer / désactiver le tracking multi-objets">TRACK</button>
+    <button id="btn-reset" title="Remettre à zéro les compteurs d'objets uniques">RESET</button>
+  </nav>
+
   <div class="infos">
     <span>FPS<b id="fps">--</b></span>
     <span>DEVICE<b id="device">--</b></span>
     <span>OBJETS<b id="objets">--</b></span>
+    <span title="Objets uniques cumulés depuis le dernier reset (tracking)">UNIQUE<b id="uniques">—</b></span>
     <span class="live"><span class="point"></span>LIVE</span>
   </div>
 </header>
@@ -296,9 +319,9 @@ main {
    ============================================================
    Page 100 % autonome : elle ne dépend du backend qu'à travers
    ses endpoints (/video_feed, /stats, /detections, /sources,
-   /set_model, /set_source). Pour l'héberger sur un autre site,
-   il suffit de renseigner API_BASE ci-dessous (le backend
-   autorise le CORS).
+   /set_model, /set_source, /set_tracking, /reset_counts).
+   Pour l'héberger sur un autre site, il suffit de renseigner
+   API_BASE ci-dessous (le backend autorise le CORS).
 */
 const API_BASE = ""; // ex. "http://192.168.1.50:8100" si la page est servie ailleurs
 
@@ -313,6 +336,7 @@ const selecteurSource = $("selecteur-source");
 
 let dernierIdVu = 0;      // id de la vignette la plus récente déjà affichée
 let libellesSources = {}; // id de source → libellé lisible (rempli par /sources)
+let modeTracking = true;  // état courant du tracking (synchronisé via /stats)
 
 /* ---------------- Flux vidéo (MJPEG via une simple balise <img>) -------- */
 function demarrerFlux() {
@@ -342,6 +366,22 @@ async function majStats() {
     // pendant que l'utilisateur manipule le menu lui-même).
     if (document.activeElement !== selecteurSource) selecteurSource.value = stats.source;
     selecteurSource.classList.toggle("attente", Boolean(stats.source_en_chargement));
+
+    // Tracking : état du toggle + compteurs d'objets uniques par classe.
+    modeTracking = Boolean(stats.mode_tracking);
+    $("btn-tracking").classList.toggle("actif", modeTracking);
+    const bloc = $("uniques");
+    const entrees = Object.entries(stats.uniques || {});
+    if (!modeTracking) {
+      bloc.textContent = "off";          // mode détection simple : pas de comptage d'IDs
+      bloc.classList.add("off");
+    } else {
+      bloc.classList.remove("off");
+      // Format demandé : "12 person, 3 car" (le plus fréquent d'abord).
+      bloc.textContent = entrees.length
+        ? entrees.map(([classe, n]) => `${n} ${classe}`).join(", ")
+        : "0";
+    }
   } catch { /* serveur momentanément injoignable : on réessaiera */ }
 }
 
@@ -391,6 +431,29 @@ async function changerSource(id) {
   }
 }
 
+/* ---------------- Tracking (toggle + reset des compteurs) --------------- */
+async function basculerTracking() {
+  try {
+    await fetch(API_BASE + "/set_tracking", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: !modeTracking }),
+    });
+    majStats(); // reflète immédiatement le nouvel état du toggle
+  } catch (erreur) {
+    console.warn("Bascule du tracking impossible :", erreur);
+  }
+}
+
+async function resetCompteurs() {
+  try {
+    await fetch(API_BASE + "/reset_counts", { method: "POST" });
+    majStats();
+  } catch (erreur) {
+    console.warn("Reset des compteurs impossible :", erreur);
+  }
+}
+
 /* ---------------- Galerie des détections -------------------------------- */
 function creerCarte(det) {
   // Construction en DOM pur (pas d'innerHTML) : sûr et lisible.
@@ -405,7 +468,7 @@ function creerCarte(det) {
   meta.className = "meta";
 
   const classe = document.createElement("span");
-  classe.className = "classe";
+  classe.className =   "classe";
   classe.textContent = det.classe.toUpperCase();
 
   const pourcentage = Math.round(det.confiance * 100);
@@ -456,6 +519,8 @@ document.querySelectorAll("#selecteur-modele button").forEach((bouton) => {
   bouton.addEventListener("click", () => changerModele(bouton.dataset.modele));
 });
 selecteurSource.addEventListener("change", () => changerSource(selecteurSource.value));
+$("btn-tracking").addEventListener("click", basculerTracking);
+$("btn-reset").addEventListener("click", resetCompteurs);
 
 demarrerFlux();
 chargerSources();
